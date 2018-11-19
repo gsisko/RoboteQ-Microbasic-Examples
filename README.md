@@ -21,5 +21,5 @@ If you are looking for a scripting example of something particular and cannot fi
 Support
 ------------------
 
-Please contact [techsupport@roboteq.com] if you have any questions.
+Please contact techsupport@roboteq.com if you have any questions.
 
