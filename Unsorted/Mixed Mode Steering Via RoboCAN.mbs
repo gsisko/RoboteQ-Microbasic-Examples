@@ -1,0 +1,78 @@
+' This script is provided "as-is", without warranty of any kind,
+' expressed or implied, including but not limited to the warranties of
+' merchatability, fitness for a particular purpose and
+' noninfringemement. In no event shall Roboteq be liable for any claim,
+' damages or other liability, arising from the use of the software.
+
+
+
+option explicit
+
+' Mixed mode using two separate controllers
+' Script is written for use in any single channel controller.
+' Script must be loaded and executed in controller that will serve as Master on a RoboCAN network.
+' Second controller will act a Slave. Master node id=1, Slave node id=2
+' Script is provided for demonstration purposes, as-is without warranty.
+
+dim Pulse1Present as integer ' Raw pulse 1 value
+dim Pulse2Present as integer ' Raw pulse 2 value
+dim Throttle as integer ' Throttle Command
+dim Steering as integer ' Seering Command
+dim LeftMotor as integer ' Left Motor Command
+dim RightMotor as integer ' Right Motor Command
+
+dim CANAlive as integer ' Alive Robocan nodes
+
+Top:
+
+' Read list of alive RoboCAN nodes
+CANAlive = getvalue(_ICL, 2)
+
+'------------------------------RC CONTROL----------------------------------------
+'Uncomment below to enable RC Command Mode
+
+'Pulse1Present = getvalue(_PI, 1) ' Check if Radio is on by reading raw pulse value
+'Pulse2Present = getvalue(_PI, 2)
+
+'if (Pulse1Present > 0 and Pulse2Present > 0 and CANAlive > 0) ' Check that both channels have a signal and slave node is alive
+    'Capture RC joystick value after scaling and conversion
+'	Throttle = getvalue(_PIC, 1) ' Throttle on pulse input 1
+'	Steering = getvalue(_PIC, 2) ' Steering on pulse input 2
+'else
+'	Throttle = 0 ' Radio if off, all commands at 0
+'	Steering = 0
+'end if
+'----------------------------------------------------------------------------------
+
+'---------------------------ANALOG JOYSTICK CONTROL--------------------------------
+' Uncomment below to enable Analog Command Mode
+' WARNING there are no safety. If joystick is missing, motors will runaway
+if (CANAlive > 1) ' Check that slave node is alive
+	Throttle = getvalue(_AIC, 1) ' Throttle on analog input 1
+	Steering = getvalue(_AIC, 2) ' Steering on analog input 2
+else
+	Throttle = 0 
+	Steering = 0
+end if
+
+' Compute Simple mixed mode algorithm
+LeftMotor = Throttle + Steering
+RightMotor = Throttle - Steering
+
+' Cap commands to +/-1000
+If LeftMotor > 1000 then LeftMotor = 1000
+If LeftMotor < -1000 then LeftMotor = -1000
+If RightMotor > 1000 then RightMotor = 1000
+If RightMotor < -1000 then RightMotor = -1000
+
+' Apply Left Command to local motors
+SetCommand(_G, 1, LeftMotor) 'Send command to local motor ch1
+'SetCommand(_G, 2, LeftMotor) 'Send command to local motor ch2
+
+' Send Right Command to Slave, node 2 on RoboCAN network
+SetCANCommand(2, _G, 1, RightMotor) 'Send command to slave motor ch1
+'SetCANCommand(2, _G, 2, RightMotor) 'Send command to slave motor ch2
+
+wait(10) ' Repeat loop every 10ms / 100Hz
+goto top
+

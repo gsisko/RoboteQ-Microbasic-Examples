@@ -1,0 +1,34 @@
+' This script is provided "as-is", without warranty of any kind,
+' expressed or implied, including but not limited to the warranties of
+' merchatability, fitness for a particular purpose and
+' noninfringemement. In no event shall Roboteq be liable for any claim,
+' damages or other liability, arising from the use of the software"
+
+' Reads the value of an analog potentiometer and the state of two button.
+' Activates the motor in forward or reverse direction based on the button pressed.
+' Analog pot sets the power level.
+
+print("starting ... \r") ' Lets user know script is starting
+
+top:
+
+Throttle = getvalue(_AIC, 1) ' Replace 1 with the analog input number on which the joystick is connected
+
+FwdButton = getvalue(_DIN, 2) ' Replace 2 with the digital input on which forward button is connected
+
+RevButton = getvalue(_DIN, 3) ' Replace 3 with the digital input on which forward button is connected
+
+if (FwdButton = 1 and RevButton = 0) ' if Fwd button only is pressed, make command = the joystick value
+	OutputPower = Throttle
+	
+elseif (FwdButton = 0 and RevButton = 1) ' if Rev button only is pressed, make negative command = the joystick value
+	OutputPower = -Throttle
+
+else ' if no button is pressed, or if both are pressed, command = 0
+	OutputPower = 0
+end if
+
+setcommand(_G, 1, OutputPower) ' Apply the command
+
+wait(10)
+goto top ' Repeat indefinitely every 10ms

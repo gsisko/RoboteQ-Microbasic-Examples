@@ -1,0 +1,32 @@
+' This script is provided "as-is", without warranty of any kind,
+' expressed or implied, including but not limited to the warranties of
+' merchatability, fitness for a particular purpose and
+' noninfringemement. In no event shall Roboteq be liable for any claim,
+' damages or other liability, arising from the use of the software"
+'
+' This script computes the power used by each motor channel and sends
+' the values on the communication port (serial or USB) every 250ms
+
+print("starting ... \r") ' Lets user know script is starting
+
+' Label marking the beginning of the script.
+top:
+
+' Read the battery voltage. It is the 1st of the 3 Voltages that can be retrieved from teh controller
+BatteryVolts = getvalue(_VOLTS, 1)
+' Compute power from each channel by multiplying the retrieve battery amps by the battery voltage
+' Since Amps and Volts are measured x10 each (ie, 245 = 24.5), the result must be divided by 10
+' For best precision do all the multiplications first. Because the math is done with integers only
+' (i.e. no decimals), getvalue(_BATAMPS, 1) /100 * BatteryVolts would not give an accurate result 
+' even though the formula is mathematically equivalent.
+Power1 = (getvalue(_BATAMPS, 1) * BatteryVolts) / 100
+Power2 = (getvalue(_BATAMPS, 2) * BatteryVolts) / 100
+
+' Output the two power values. E.g. W=55:66. Terminate with "\r" for cariage return
+print ("W=",Power1,":",Power2,"\r")
+
+' Wait 250ms before checking the buttons again.
+wait(250)
+goto top
+
+

@@ -1,0 +1,11 @@
+i = 0
+
+top:
+
+setcommand(_var,1,i)
+
+i++
+
+wait(1) '1kHz, counts at 1ms intervals
+
+goto top

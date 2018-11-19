@@ -1,0 +1,70 @@
+'Configurable Data
+Poles = 4
+SpeedPos_Kp = 40
+SpeedPos_Ki = 10
+Speed_Kp = 0
+Speed_Ki = 5
+WaitWhenRunning = 10000 '2 seconds
+'Initialisation
+SpeedPos = 1  ' If 1 it runs in speed position else in closed loop speed
+AccDec   = getvalue(_VAR,1) ' Acceleration Deceleration set to VAR 1 (in RPM/s)
+MaxSpeed = getvalue(_VAR,2) ' Speed to reach set in VAR 2 (in RPM)
+setconfig(_BLFB, 1, 1) ' Feedback Hall Sensor
+setconfig(_BPOL, 1, Poles) ' Motor Poles
+setconfig(_MXRPM,1, MaxSpeed)
+setconfig(_MVEL, 1, MaxSpeed)
+setconfig(_MAC,  1, AccDec*10)
+setconfig(_MDEC, 1, AccDec*10)
+print("Start\r")
+start:
+setconfig(_MMOD, 1, 0) ' switch to open loop for a while in order to avoid motor bumps
+wait(2000)
+if(SpeedPos=0) then 'Closed Loop Speed
+	setconfig(_KP, 1, Speed_Kp)
+	setconfig(_KI, 1, Speed_Ki)
+	setconfig(_MMOD, 1, 1)
+	print("Closed Loop Speed\r")
+else 'Closed Loop Speed
+	setconfig(_KP, 1, SpeedPos_Kp)
+	setconfig(_KI, 1, SpeedPos_Ki)
+	setconfig(_MMOD, 1, 6)
+	print("Closed Loop Speed Position\r")
+end if
+wait(2000)
+TimerAcc = 0
+TimerDec = 0
+Counter  = 0
+Up       = 1
+top:
+Speed = getvalue(_BS,1)
+if(Up = 0) then ' Go from max speed to 0
+	if(Speed <= 0) then
+		print("Decel(",AccDec,"): ", TimerDec, "\r")
+		Up = 1
+		if(SpeedPos = 1) then
+			SpeedPos = 0
+			goto start
+		else
+			terminate
+		end if
+	else
+		TimerDec++
+		Command = 0
+	end if
+elseif(Up = 1) then ' Go from 0 to max speed
+	if(Speed >= MaxSpeed) then
+		print("Accel(",AccDec,"): ", TimerAcc, "\r")
+		WaitC = 0
+		Up = 2
+	else
+		TimerAcc++
+		Command = 1000
+	end if
+elseif(Up = 2) then ' wait 5 sec
+	if(WaitC++ = WaitWhenRunning)
+		Up = 0
+	end if
+end if
+setcommand(_G, 1, Command)
+wait(1)
+goto top

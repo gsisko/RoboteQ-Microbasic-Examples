@@ -1,0 +1,32 @@
+option explicit
+' This script is provided "as-is", without warranty of any kind,
+' expressed or implied, including but not limited to the warranties of
+' merchatability, fitness for a particular purpose and
+' noninfringemement. In no event shall Roboteq be liable for any claim,
+' damages or other liability, arising from the use of the software"
+
+
+
+option explicit
+
+Dim ThrottleCenter as integer
+Dim Throttle as integer
+
+ThrottleCenter = getconfig(_ACTR, 9) 'Query the calibrated throttle center point
+
+top: 'beginning of loop
+
+Throttle = getvalue(_ai, 9) 'Query the current throttle
+
+if Throttle < ThrottleCenter then 'If throttle is less than the center point (reverse direction)
+
+	setconfig(_APOL, 7, 1) 'invert the steering command
+	
+else
+	setconfig(_APOL, 7, 0) 'otherwise make steering command direct
+	
+end if
+
+wait(10) 'loop at 100Hz
+
+goto top 'loop forever

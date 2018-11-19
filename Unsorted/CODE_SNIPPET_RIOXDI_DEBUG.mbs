@@ -1,0 +1,52 @@
+option explicit
+
+
+'declare variables
+dim RoboCANactive as boolean
+
+dim DI_5 as integer
+
+dim i as integer
+
+
+
+dim DI_[25] as boolean
+
+dim RefreshRate as integer
+
+'initialize constants
+RefreshRate = 10
+wait(1)
+
+ScanCANValue(2,_D,1,RefreshRate,5)'=(node 2, Digital Input, RIOX Input 5, 10ms, buffer location 5) RightBCableDetect Input from RIOX
+
+
+Top:
+'Check to see if RIOX is communicating
+If(IsCANNodeAlive(2))'RoboCAN heartbeat @128ms function, node 2(RIOX)
+	RoboCANactive = true
+else
+	RoboCANactive = false
+end if
+
+If (IsScannedCANReady(5))'is there a new value in buffer location 5? reports boolean true of false
+	DI_5 = ReadScannedCANValue(5)'read new value in buffer location 5 as integer. if same as old, use old
+end if
+
+
+' This is the section that places the integer mask of all the digital inputs of the RIOX into an array as individual boolean values.
+' It may require some modification to make sure that the Digital inputs line up properly to their index in the array that matches our documentation. 
+For i = 0 AndWhile i < 25 Evaluate i++
+	DI_[i] = ToBool((DI_5 >> i) mod 2)
+Next
+	
+'Print all the digital inputs
+print("RIOX digital inputs: ")
+For i = 0 AndWhile i < 25 Evaluate i++
+	print(" ", DI_[i])
+Next
+print("\r\n")
+
+
+wait(10)
+goto top ' Loop forever

@@ -1,0 +1,12 @@
+top:
+setcommand(_VAR, 1, getvalue(_A,  1)) ' put to VAR 1(TPDO 1) the Motor Amps 1 (A - Read Motor Amps, p230)
+setcommand(_VAR, 2, getvalue(_A,  1)) ' put to VAR 2(TPDO 1) the Motor Amps 2
+setcommand(_VAR, 3, getvalue(_S,  1)) ' put to VAR 1(TPDO 1) the Encoder Speed 1 (S - Read Encoder Motor Speed in RPM, p257)
+setcommand(_VAR, 4, getvalue(_S,  1)) ' put to VAR 2(TPDO 1) the Encoder Speed 2
+'the rest can be set accordingly. Advise table 16-4 in p.172 for TPDO mapping.
+setcommand(_G, 1, getvalue(_VAR,  9)) ' get from VAR  9(RPDO 1) the Motor Command 1 (G - Go to Speed or to Relative Position, p.220)
+setcommand(_G, 2, getvalue(_VAR, 10)) ' get from VAR 10(RPDO 1) the Motor Command 2
+setcommand(_DS, getvalue(_VAR,  11)) ' get from VAR 11(RPDO 2) the Digital Output values (DS - Set all Digital Out bits, p.218)
+'the rest can be set accordingly. Advise table 16-5 in p.172 for RPDO mapping.
+wait(10) 'wait 10ms
+goto top

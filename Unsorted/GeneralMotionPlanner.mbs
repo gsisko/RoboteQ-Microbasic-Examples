@@ -1,0 +1,134 @@
+' This script is provided "as-is", without warranty of any kind,
+' expressed or implied, including but not limited to the warranties of
+' merchatability, fitness for a particular purpose and
+' noninfringemement. In no event shall Roboteq be liable for any claim,
+' damages or other liability, arising from the use of the software"
+
+''''''''''''''''''''''''''''Motion Planning Script''''''''''''''
+''''Gabriel Isko, RoboteQ, 10/9/2018
+'''' The purpose of this script is to act as a general implementation of a motion planner
+'''' This motion planner will allow RoboteQ users to send motion commands at set timestamps
+''''
+''''
+'''' WARNING: This script will NOT work in the Roborun+ simulator becuase of its use of timers
+''''
+option explicit
+
+'Defines
+#define MAX_MOVES 6 'number of moves the motion planner should perform
+#define LOOP_DELTA 10 'Number of ms controller waits each loop
+
+'Set a Debug flag define
+#define DEBUG True
+
+'Motion Planning arrays
+'These arrays store the velocities (as roboteq motor commands) and time frames for a motion planner (in Ms)
+'Each channel get's a command array and a time stamp array. 
+
+
+dim CmdArray1[MAX_MOVES] as integer
+dim CmdArray2[MAX_MOVES] as integer
+dim TimeArray1[MAX_MOVES] as integer
+dim TimeArray2[MAX_MOVES] as integer
+
+
+
+'Populate arrays with Motion commands
+'Command is the motor command, and the time command is the time stampe in ms that it applies it at
+'Unfortunately I cannot think of a more elegant way to do this.
+CmdArray1[0] = 0
+CmdArray1[1] = 1000
+CmdArray1[2] = -1000
+CmdArray1[3] = 0
+CmdArray1[4] = -1000
+CmdArray1[5] = 0
+
+TimeArray1[0] = 0
+TimeArray1[1] = 1000
+TimeArray1[2] = 3000
+TimeArray1[3] = 5000
+TimeArray1[4] = 15000
+TimeArray1[5] =   17000
+
+CmdArray2[0] = 0
+CmdArray2[1] = 1000
+CmdArray2[2] = -1000
+CmdArray2[3] = 0
+CmdArray2[4] = -1000
+CmdArray2[5] = 0
+
+TimeArray2[0] = 0
+TimeArray2[1] = 7000
+TimeArray2[2] = 9000
+TimeArray2[3] = 11000
+TimeArray2[4] = 15000
+TimeArray2[5] = 17000
+
+
+'State variables
+dim CmdState1 as integer
+dim CmdState2 as integer
+
+wait(500)
+
+Initialize:
+	'disable the watchdog timer
+	'SetCommand(_RWD, 0) 
+	
+	'initialize StateVariables
+	CmdState1 = 0
+	cmdState2 = 0
+	
+	'Start Timers
+
+	
+	
+
+
+top:
+	'Perform loop Start actions
+	
+	'Check timer states to update motor commands
+	'Possibly could be handled in a subroutine
+	'need to fix this to allow timer pauses
+	
+	if(getTimerState(1)) then  'Fist we check if the timer has reached it's count down
+		setcommand(_G, 1, CmdArray1[CmdState1])
+		setTimerCount(1, TimeArray1[CmdState1])
+		if (CmdState1 + 1) < MAX_MOVES then
+			CmdState1++
+		end if
+		
+	end if
+	
+	if(getTimerState(2)) then
+		setcommand(_G, 2, CmdArray2[CmdState2])
+		setTimerCount(2, TimeArray2[CmdState2])
+		if (CmdState2 + 1) < MAX_MOVES then
+			CmdState2++
+		end if
+	end if
+	
+	'Could implement script repeat checking and what not here,
+	'It will require more robust variables for script flow control'
+	'Unfortunately they will have to be global because there is limited scope options in microbasic.
+	
+	'Give a wait command
+	wait(LOOP_DELTA)
+	
+	gosub Debug
+	
+	
+goto top
+
+
+
+Debug:
+	'Debug Section
+	if DEBUG then
+		print("Timer 1: ",getTimerCount(1),"\tTimer 2: ",getTimerCount(2),"\n")
+		print("Timer 1 State: ",getTimerState(1),"\tTimer 2 State: ",getTimerState(2),"\n")
+	end if
+	return
+
+	

@@ -1,0 +1,40 @@
+' This script is provided "as-is", without warranty of any kind,
+' expressed or implied, including but not limited to the warranties of
+' merchatability, fitness for a particular purpose and
+' noninfringemement. In no event shall Roboteq be liable for any claim,
+' damages or other liability, arising from the use of the software"
+
+
+option explicit
+
+dim Button as integer
+dim Speed as integer
+dim Brake as integer
+dim CurrentSpeed as integer
+
+
+top:
+Button = getvalue(_DIN, 2)
+Speed = (getvalue(_BSR, 1)-0) * 10
+Brake = getvalue(_PI, 1)
+Brake = Brake -1100 ' Subtract rest position
+
+if Brake < 0 then Brake = 0 ' Do not allow value to become negative
+if Button = 1 ' Rider is on
+ setconfig(_OVL, 255) ' 25.5V overvoltage limit to enable motor
+ if Brake = 0 ' Brake is off, desired speed = measured speed
+ if Speed > CurrentSpeed then CurrentSpeed = Speed
+ else
+ ' Reduce speed by the amount of braking
+ CurrentSpeed = CurrentSpeed - Brake
+ end if
+else ' Rider is off
+ CurrentSpeed = 0
+ setconfig(_OVL, 5) ' Force overvoltage detection to float motors
+end if
+if CurrentSpeed < 0 then CurrentSpeed = 0 ' Never negative speed
+setcommand(_G, 1, CurrentSpeed/10)
+' Uncomment below to print for debug
+'print(Brake,"\t",Speed,"\t",CurrentSpeed,"\r")
+wait(10) ' Repeat loop at 100Hz
+goto top

@@ -1,0 +1,26 @@
+option explicit
+
+dim command as integer
+dim power as integer
+dim hall_ct as integer
+dim enc_ct as integer
+dim angle as integer
+dim FOC_corr as integer
+
+print("Command:\t","Power:\t","Hall Count:\t","Enc Count:\t", "Angle:\t", "FOC Corr:\r")
+
+top:
+
+Command = getvalue(_M,1)
+Power = getvalue(_p,1)
+Hall_ct = getvalue(_cb,1)
+Enc_ct = getvalue(_c,1)
+Angle = getvalue(_ANG, 1)
+FOC_corr = getvalue(_FC, 1)
+
+
+print(Command,"\t",Power,"\t",Hall_ct,"\t",Enc_ct,"\t",Angle,"\t",FOC_corr,"\r")
+
+wait(10) 'loop 100Hz
+
+goto top  'loop forever

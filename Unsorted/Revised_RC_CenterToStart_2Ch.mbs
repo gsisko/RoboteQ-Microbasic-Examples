@@ -1,0 +1,88 @@
+' This script is provided "as-is", without warranty of any kind,
+' expressed or implied, including but not limited to the warranties of
+' merchatability, fitness for a particular purpose and
+' noninfringemement. In no event shall Roboteq be liable for any claim,
+' damages or other liability, arising from the use of the software."
+
+
+' Pulse Input Center To Start
+' This script will disable motor commands unless the RC source  
+' begins at the center position.
+
+Option Explicit
+
+'declare variables
+dim Throttle as integer
+dim Steering as integer
+dim RC1_Center as integer
+dim RC2_Center as integer
+dim RC1_Present as integer
+dim RC2_Present as integer
+dim RC1 as integer
+dim RC2 as integer
+dim RC_Status as integer
+dim PrevRC_Status as integer
+
+'declaire pulse/rc inputs being used
+Throttle = 1 'Pulse Input Used for Throttle, change as needed
+Steering = 2 'Pulse Input Used for Steering, change as needed
+
+'query pulse center point configuration
+RC1_Center = getconfig(_PCTR, Throttle)
+RC2_Center = getconfig(_PCTR, Steering)
+
+
+'Main Loop
+Top:
+
+Print("Top of Loop\r") '**Uncomment for debugging
+
+'check if RC remote turned on
+RC1_Present = getvalue(_PI, Throttle) 
+RC2_Present = getvalue(_PI, Steering)
+
+RC1 = getvalue(_PIC, Throttle)
+RC2 = getvalue(_PIC, Steering)
+
+If RC1_Present and RC2_Present then
+	RC_Status = 1
+	Print("RC On\r")	'**Uncomment for debugging
+Else
+	RC_Status = 0
+	Print("RC Off\r")   '**Uncomment for debugging	
+End If
+
+
+If(RC_Status <> PrevRC_Status) 'Only enter if the on/off status of RC remote has changed
+
+'Center to start loop
+	While RC1 <> 0 or RC2 <> 0
+		print("**RC Not At Center - Unsafe To Start**\r")  '**Uncomment for debugging
+		SetCommand(_G, 1, 0)
+		SetCommand(_G, 1, 0)
+		RC1 = getvalue(_PIC, Throttle) 
+		RC2 = getvalue(_PIC, Steering)
+		wait(10)
+	End while
+	
+	Print("**RC Centered - Safe To Start**\r")    '**Uncomment for debugging
+	
+	
+End If
+
+PrevRC_Status = RC_Status
+
+wait(10) 'loop at 100Hz
+
+Goto Top 'Loop forever	
+	
+	
+
+
+
+
+
+
+
+
+

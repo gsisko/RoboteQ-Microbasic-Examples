@@ -1,0 +1,21 @@
+option explicit	
+
+dim LeftTrack1 as integer
+dim RightTrack1 as integer
+dim LeftTrack2 as integer
+dim RightTrack2 as integer
+
+
+Top:
+
+LeftTrack1 = getvalue(_MGT, 1) 'read left track position of sensor at pulse input 1
+RightTrack1 = getvalue(_MGT, 2) 'read right track position of sensor at pulse input 1
+LeftTrack2 = getvalue(_MGT, 4) 'read left track position of sensor at pulse input 2
+RightTrack2 = getvalue(_MGT, 5) 'read right track position of sensor at pulse input 2
+
+Print("Left Track 1: ",LeftTrack1,"\tRight Track 1: ",Righttrack1,"\r") 'Print track positions read by sensor at pulse input 1
+Print("Left Track 2: ",LeftTrack2,"\tRight Track 2: ",Righttrack2,"\r") 'Print track positions read by sensor at pulse input 2
+
+wait(100)
+
+Goto Top

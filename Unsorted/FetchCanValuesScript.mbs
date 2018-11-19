@@ -1,0 +1,150 @@
+'For a complete list of commands, see the document at this updated url:
+'http://www.roboteq.com/index.php/docman/motor-controllers-documents-and-files/documentation/user-manual/272-roboteq-controllers-user-manual-v17/file
+SCRIPT_VER=10
+MAX_CHANNELS=1
+
+' status of the 3 controllers
+dim L_alive as boolean
+dim R_alive as boolean
+dim B_alive as boolean
+
+top:
+
+' check if all the controllers on the CAN Bus are alive
+L_alive = 1'IsCANNodeAlive(1)
+B_alive = 1'IsCANNodeAlive(2)
+R_alive = 1'IsCANNodeAlive(3) 
+
+if L_alive and B_alive and R_alive then
+	'print("All controllers are alive and responding\n")
+
+	for ch = 1 andwhile ch <= MAX_CHANNELS evaluate ch++
+		GoSub PrintFeedback  ' 25 Hz
+	next
+	c++
+	if c = 5 then
+		GoSub PrintStatus  ' 5 Hz
+		c = 0
+	end if
+	wait(19)
+else  
+	print("RoboCAN: dead node")
+	print("\r")
+end if
+	goto top
+
+PrintFeedback:
+	print("@01&f:", ch)
+	print(":", getvalue(_MOTAMPS, ch)) 'Read Motor Amps (cmd: _A)   
+	'print(":", getvalue(_MOTPWR, ch))  'Read Motor Power Output Applied _P
+	print(":", getvalue(_MOTCMD, ch))  'Read Motor Command _M
+	print(":", getvalue(_ABSPEED, ch)) 'Read Encoder Motor Speed RPM _S
+	print(":", getvalue(_ABCNTR, ch))  'Read Encoder Absolute Count _C
+	print(":", getvalue(_VOLTS, 2))    'Read Volts. _V; 2=>Battery Volts
+	'print(":", getvalue(_BATAMPS, ch)) 'Read Vattery Amps _BA
+	'print(":", getvalue(_ANAIN, 3))    'Read Analog Inputs _AI 3=>Sense1
+    'print(":", getvalue(_ANAIN, 6))    'Read Analog Inputs _AI 6=>Sense2
+	print(":", getvalue(_DIN, 5))      'Read Digital Inputs _AI 3=>EStop1
+    'print(":", getvalue(_DIN, 4))      'Read Digital Inputs _AI 6=>EStop2
+	'print(":", getvalue(_TEMP, ch+1))  'Read Temperature _T; 2=>Ch1 3=>Ch2
+	print("\r")
+	
+	print("@02&f:", ch)
+	FetchCANValue(2, _MOTAMPS, ch) ' request data from remote node
+	GoSub CANFeedback
+	'FetchCANValue(2, _MOTPWR, ch) 
+	'GoSub CANFeedback
+	FetchCANValue(2, _MOTCMD, ch) 
+	GoSub CANFeedback
+	FetchCANValue(2, _ABSPEED, ch) 
+	GoSub CANFeedback  
+	FetchCANValue(2, _ABCNTR, ch) 
+	GoSub CANFeedback 
+	FetchCANValue(2, _VOLTS, 2)
+	GoSub CANFeedback
+	'FetchCANValue(2, _BATAMPS, ch) 
+	'GoSub CANFeedback 
+	'FetchCANValue(2, _ANAIN, 3)
+	'GoSub CANFeedback
+	'FetchCANValue(2, _ANAIN, 6) 
+	'GoSub CANFeedback 
+	FetchCANValue(2, _DIN, 5) 
+	GoSub CANFeedback 
+	'FetchCANValue(2, _DIN, 4) 
+	'GoSub CANFeedback
+	'FetchCANValue(2, _TEMP, ch+1) 
+	'GoSub CANFeedback
+	print("\r") 
+	
+	print("@03&f:", ch)
+	FetchCANValue(3, _MOTAMPS, ch) 
+	GoSub CANFeedback 
+	'FetchCANValue(3, _MOTPWR, ch) 
+	'GoSub CANFeedback
+	FetchCANValue(3, _MOTCMD, ch) 
+	GoSub CANFeedback
+	FetchCANValue(3, _ABSPEED, ch) 
+	GoSub CANFeedback
+	FetchCANValue(3, _ABCNTR, ch) 
+	GoSub CANFeedback
+	FetchCANValue(3, _VOLTS, 2)
+	GoSub CANFeedback 
+	'FetchCANValue(3, _BATAMPS, ch) 
+	'GoSub CANFeedback 
+	'FetchCANValue(3, _ANAIN, 3) 
+	'GoSub CANFeedback
+	'FetchCANValue(3, _ANAIN, 6)
+	'GoSub CANFeedback
+	FetchCANValue(3, _DIN, 5) 
+	GoSub CANFeedback
+	'FetchCANValue(3, _DIN, 4) 
+	'GoSub CANFeedback
+	'FetchCANValue(3, _TEMP, ch+1) 
+	'GoSub CANFeedback
+	print("\r")
+	Return
+			
+PrintStatus:
+	print("@01&s:", SCRIPT_VER)
+	print(":", getvalue(_FLTFLAG))   'Read Fault Flag _FF
+	print(":", getvalue(_STFLAG))    'Read Status Flag _FS
+	print(":", getvalue(_TEMP, 1))   'Read Temperature _T 1=>MCU 
+	print(":", getvalue(_VOLTS, 1))  'Read Volts. _V; 1=>Internal Volts
+	print(":", getvalue(_VOLTS, 3))  'Read Volts. _V; 3=>5v line
+	print("\r")
+	
+	print("@02&s:", SCRIPT_VER)
+	FetchCANValue(2, _FLTFLAG, ch) 
+	GoSub CANFeedback
+	FetchCANValue(2, _STFLAG, ch) 
+	GoSub CANFeedback
+	FetchCANValue(2, _TEMP, 1) 
+	GoSub CANFeedback
+	FetchCANValue(2, _VOLTS, 1) 
+	GoSub CANFeedback
+	FetchCANValue(2, _VOLTS, 3) 
+	GoSub CANFeedback
+	print("\r")
+	
+	print("@03&s:", SCRIPT_VER)
+	FetchCANValue(3, _FLTFLAG, ch) 
+	GoSub CANFeedback
+	FetchCANValue(3, _STFLAG, ch) 
+	GoSub CANFeedback
+	FetchCANValue(3, _TEMP, 1) 
+	GoSub CANFeedback
+	FetchCANValue(3, _VOLTS, 1) 
+	GoSub CANFeedback
+	FetchCANValue(3, _VOLTS, 3) 
+	GoSub CANFeedback
+	print("\r")
+	Return
+	
+CANFeedback:
+	print ("waiting")
+	while(IsCANValueReady() = false) ' wait until data is received 
+	end while
+	print ("received")
+	print (":", ReadCANValue()) ' read value and print value 
+	Return	
+

@@ -1,0 +1,34 @@
+option explicit
+
+dim Resistance as integer
+dim RPMperVolt as integer
+dim BatMilivolts as integer
+dim PWMLevel as integer
+dim MotMiliAmps as integer
+dim VoltageDrop as integer
+dim BEMF as integer
+dim MotorSpeed as integer
+dim ControllerOutVoltage as integer
+
+
+' Define constants
+Resistance = 100 ' Value in milohm. Put your motor's and cables characteristics
+RPMperVolt = 200 ' Put your motor's characteristics
+
+
+top:
+BatMilivolts = getvalue(_V, 2) * 100
+PWMLevel = getvalue(_P, 1)
+MotMiliAmps = getvalue(_A, 1) * 100
+
+VoltageDrop = (Resistance * MotMiliamps) / 1000 ' Result in Milivolts
+ControllerOutVoltage = (BatMilivolts * 1000) / PWMLevel
+
+BEMF = ControllerOutVoltage - VoltageDrop ' BEMF in milivolts
+
+MotorSpeed = (RPMperVolt * BEMF) / 1000
+
+print (BatMilivolts,"\t",PWMLevel,"\t",ControllerOutVoltage,"\t",MotMiliAmps,"\t",VoltageDrop,"\t",BEMF,"\t",MotorSpeed,"\r")
+wait(10)
+goto top
+

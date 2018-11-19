@@ -1,0 +1,50 @@
+dim position as integer
+dim direction as integer
+dim range as integer
+dim command as integer
+
+
+range = 20000000
+direction = 1
+position = 0
+speed = 1
+command = 0
+
+
+top:
+	
+	gosub CHANNEL_2_CONTROL
+	
+	setcommand(_P, 1, position)
+
+	
+	wait(10)
+
+goto top
+
+
+DEBUG:
+	print("command: ", command, "\n")
+	return
+	
+
+'Go up and down the maximum range
+TRAVERSE:
+	IF position >= range then
+		direction = -1
+	elseif position <= -range then
+		direction = 1
+	end if
+			
+	velocity = speed * direction	
+	
+	position += velocity
+	
+	return
+
+'Control Channel 1 with Channel 2 motor command
+CHANNEL_2_CONTROL:
+	command = getvalue(_M, 2)
+	speed = getvalue(_VAR, 1)
+	position = command*speed
+	return

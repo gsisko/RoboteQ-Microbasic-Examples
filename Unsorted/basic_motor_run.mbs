@@ -1,0 +1,26 @@
+'top:
+
+'bat = getvalue(_volts,2)
+
+'if (bat > 150) then
+'	setcommand(_go, 1, 500)
+	
+'else
+'	setcommand(_go, 1, 0)
+	
+'end if
+
+
+settimercount(1, 5000)
+
+go:
+setcommand(_go, 1,500)
+t1 = gettimercount(1)
+
+if t1 > 0 then
+	goto go	
+else
+	setcommand(_go, 1,0)	
+end  if
+
+

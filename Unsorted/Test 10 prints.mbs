@@ -1,0 +1,21 @@
+' This script is provided "as-is", without warranty of any kind,
+' expressed or implied, including but not limited to the warranties of
+' merchatability, fitness for a particular purpose and
+' noninfringemement. In no event shall Roboteq be liable for any claim,
+' damages or other liability, arising from the use of the software"
+
+' Prints Hi 10 times in order 0 through 9
+
+print("starting ... \r") ' Lets user know script is starting
+
+for i = 0 andwhile i < 10 
+' begin loop sequence count while condition is true when i is between 0 and less than 10
+
+print(i," ") ' display i value, and " "
+gosub printhi ' go to sub routine printhi
+next i ' continue next loop
+terminate ' ends script
+
+printhi: ' label header subroutine
+print("hi\r") ' prints "hi"
+return ' return to routine

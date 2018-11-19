@@ -1,0 +1,11 @@
+top:
+
+setcommand(_G, 1 200)
+
+wait(1000)
+
+setcommand(_G, 1, 0)
+
+wait(1000)
+
+goto top

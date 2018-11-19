@@ -1,0 +1,21 @@
+' This script is provided "as-is", without warranty of any kind,
+' expressed or implied, including but not limited to the warranties of
+' merchatability, fitness for a particular purpose and
+' noninfringemement. In no event shall Roboteq be liable for any claim,
+' damages or other liability, arising from the use of the software."
+
+' Changes configuration between open loop and closed loop speed mode depending on motor command.
+' When command is 0, controller is switched to open loop to save energy. Switches to closed loop
+' when non-zero command
+
+print("starting ... \r")
+top: ' label header
+if(getvalue(_M, 1) <> 0) ' Read throttle motor command
+	setconfig(_MMOD, 1, 1) ' switch to closed loop channel 1 motor if command is different than 0
+	setconfig(_MMOD, 2, 1) ' switch to closed loop channel 2 motor if command is different than 0
+else
+	setconfig(_MMOD, 1, 0) ' switch to open loop channel 1 motor if command is 0
+	setconfig(_MMOD, 2, 0) ' switch to open loop channel 1 motor if command is 0
+end if
+wait(10) ' wait 10 mS
+goto top ' return to label header top:

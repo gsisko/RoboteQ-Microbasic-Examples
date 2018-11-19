@@ -1,0 +1,25 @@
+'This is a sample script to demonstrate how to print controller data in console.  Adjust datapoints and variables as needed.
+
+print("starting....\r")
+
+print("Analog:\t","Command:\t","Power:\t","MotorAmps:\t","BatAmps:\t","Fault:\r")
+
+top:
+
+
+AnaIn = getvalue(_ai,x) 'replace x with the analog chanel you are using
+Command = getvalue(_M,1)
+Power = getvalue(_p,1)
+MotorAmps = getvalue(_A,1)
+BatAmps = getvalue(_BA,1)
+Fault = getvalue(_FF)
+
+
+print(AnaIn,"\t",Command,"\t",Power,"\t",MotorAmps,"\t",BatAmps,"\t",Fault,"\r" )
+
+
+
+wait(10) 'loop every 10ms (100Hz) **adjust this based on frequency you'd like to monitor
+
+
+goto top  'loop forever

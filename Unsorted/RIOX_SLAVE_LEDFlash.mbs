@@ -1,0 +1,72 @@
+' This script is provided "as-is", without warranty of any kind,
+' expressed or implied, including but not limited to the warranties of
+' merchatability, fitness for a particular purpose and
+' noninfringemement. In no event shall Roboteq be liable for any claim,
+' damages or other liability, arising from the use of the software"
+
+' Sends RoboCAN commands in sequence to RIOX board configured as Slave Node.
+' Activates Douts 1 - 8, holds then deactivates Douts 8 - 1 in a loop.
+
+#define STARTLED 1
+#define ENDLED	 16
+
+
+Print("Starting...") 'Prints verification in console that script has started
+
+'Turn all of the outputs off
+For i = ENDLED AndWhile i <= STARTLED Evaluate i--
+	setCANCommand(02, _DRES, 0, i)
+Next
+
+Top:
+
+For i = STARTLED AndWhile i <= ENDLED Evaluate i++
+	setCANCommand(02, _DSET, 0, i)
+	wait(250)
+Next
+
+wait(500)
+
+For i = ENDLED AndWhile i <= STARTLED Evaluate i--
+	setCANCommand(02, _DRES, 0, i)
+	wait(250)
+Next
+
+wait(500)
+
+
+'Routine that flashes the LEDs in sequence on the RIOX
+setCANcommand(02,_Dset, 0, 1) 'Enable RIOX Digital Output 1
+wait(250) 'wait 250 milliseconds
+setCANcommand(02,_DSET, 0, 2) 'Enable RIOX Digital Output 2
+wait(250) 'wait 250 milliseconds
+setCANcommand(02,_Dset, 0, 3) 'Enable RIOX Digital Output 3
+wait(250) 'wait 250 milliseconds
+setCANcommand(02,_Dset, 0, 4) 'Enable RIOX Digital Output 4
+wait(250) 'wait 250 milliseconds
+setCANcommand(02,_Dset, 0, 5) 'Enable RIOX Digital Output 5
+wait(250) 'wait 250 milliseconds
+setCANcommand(02,_Dset, 0, 6) 'Enable RIOX Digital Output 6
+wait(250) 'wait 250 milliseconds
+setCANcommand(02,_Dset, 0, 7) 'Enable RIOX Digital Output 7
+wait(250) 'wait 250 milliseconds
+setCANcommand(02,_Dset, 0, 8) 'Enable RIOX Digital Output 8
+wait(500) 'wait 500 milliseconds
+setCANcommand(02,_DRES, 0, 8) 'Disable RIOX Digital Output 8
+wait(250) 'wait 250 milliseconds
+setCANcommand(02,_DRES, 0, 7) 'Disable RIOX Digital Output 7
+wait(250) 'wait 250 milliseconds
+setCANcommand(02,_DRES, 0, 6) 'Disable RIOX Digital Output 6
+wait(250) 'wait 250 milliseconds
+setCANcommand(02,_DRES, 0, 5) 'Disable RIOX Digital Output 5
+wait(250) 'wait 250 milliseconds
+setCANcommand(02,_DRES, 0, 4) 'Disable RIOX Digital Output 4
+wait(250) 'wait 250 milliseconds
+setCANcommand(02,_DRES, 0, 3) 'Disable RIOX Digital Output 3
+wait(250) 'wait 250 milliseconds
+setCANcommand(02,_DRES, 0, 2) 'Disable RIOX Digital Output 2
+wait(250) 'wait 250 milliseconds
+setCANcommand(02,_DRES, 0, 1) 'Disable RIOX Digital Output 1
+wait(500) 'wait 500 milliseconds
+
+goto top 'Loop forever

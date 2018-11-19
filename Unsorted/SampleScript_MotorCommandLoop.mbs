@@ -1,0 +1,27 @@
+' This script is provided "as-is", without warranty of any kind,
+' expressed or implied, including but not limited to the warranties of
+' merchatability, fitness for a particular purpose and
+' noninfringemement. In no event shall Roboteq be liable for any claim,
+' damages or other liability, arising from the use of the software."
+'
+' Script runs in brushed DC motor controller. Will run a motor at 50% duty cycle
+' looping on and off for 5 second increments.
+
+Option Explicit
+
+setconfig(_rwd, 0) 'Disable serial watchdog timer
+
+Top:  ' betinning of loop
+
+Setcommand(_G, 1, 500)  'sends command to motor channel 1, 50% duty cycle
+'Setcommand(_G, 2, 500) 'sends command to motor channel 1, 50% duty cycle, uncomment to enable
+
+wait(5000) 'hold for 5 seconds
+
+setcommand(_G, 1, 0)  'Stop motor channel 1
+'setcommand(_G, 2, 0) 'Stop motor channel 2, uncomment to enable
+
+wait(5000) 'hold for 5 seconds
+
+goto Top  'loop forever
+

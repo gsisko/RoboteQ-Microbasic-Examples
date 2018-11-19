@@ -1,0 +1,16 @@
+Comm = 100
+top:
+Zeropoint = getvalue(_DI,1)
+RightLimit = getvalue(_DI,2)
+LeftLimit = getvalue(_DI,3)
+if(LeftLimit = 1)
+	setcommand(_G, Comm)
+elseif(RightLimit = 1)
+	setcommand(_G, -Comm)
+elseif(ZeroPoint = 1)
+	setcommand(_G, 0)
+else
+	setcommand(_G, -Comm)
+end if
+wait(100)
+goto top

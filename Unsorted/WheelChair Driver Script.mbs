@@ -1,0 +1,1126 @@
+option EXPLICIT
+print ("John_2016_12_21 \n")
+' ******************************************************************************************************
+' ******************************************************************************************************
+'TurnMix modified so that Throttle = currentSpeed except once every (TurnBoost+1) loop cycles
+'AccelMix is no longer used
+' ******************************************************************************************************
+' ******************************************************************************************************
+'See end of file for version information and change log
+
+
+' declaration of integer variables (no user attention needed)
+
+DIM Brake1Bit as INTEGER
+DIM Brake1Pin as INTEGER
+DIM Brake1Mask as INTEGER
+DIM Brake2Bit as INTEGER
+DIM Brake2Pin as INTEGER
+DIM Brake2Mask as INTEGER
+DIM BrakesMask as INTEGER
+DIM SpeedPotPin AS Integer
+DIM LeftCurrentSensorPin AS Integer
+DIM RightCurrentSensorPin AS Integer
+DIM AlarmPin AS Integer
+DIM Damping AS Integer
+DIM SpeedPot AS Integer
+DIM DefaultPot AS Integer
+DIM SpeedPotLowFault AS Integer
+DIM SpeedPotHighFault AS Integer
+DIM SpeedPotFwdMax AS Integer
+DIM SpeedPotFwdMin AS Integer
+DIM SpeedPotRevMax AS Integer
+DIM SpeedPotRevMin AS Integer
+DIM TurnPotFwdMax AS Integer
+DIM TurnPotFwdMin AS Integer
+DIM TurnPotRevMax AS Integer
+DIM TurnPotRevMin AS Integer
+DIM TurnAtFullSpeed AS Integer
+DIM Accel AS Integer
+DIM Decel AS Integer
+DIM lastM1Decel AS Integer
+DIM lastM2Decel AS Integer
+DIM lastM1Accel AS Integer
+DIM lastM2Accel AS Integer
+DIM TurnBoost AS Integer
+DIM LoadBoost_P AS Integer
+DIM LoadBoost_I AS Integer
+DIM LoadBoost_D AS Integer
+DIM LoadBoostCurving AS Integer
+DIM Threshold AS Integer
+DIM BackStickBraking as INTEGER
+DIM MotorResistance as INTEGER
+DIM CompDeadband AS Integer
+DIM CompTurnBoost AS Integer
+DIM TurnBoostLimit AS Integer 'ForeAftPower at which extra CompTurnBoost milliohms disappears
+DIM MainLoopWaitTime AS Integer
+DIM CyclesPerSpeedPotRead AS Integer
+DIM TimeBetweenAmpHrReads AS Integer
+DIM TimeBetweenAmpHrOutputs AS Integer
+DIM FullRechargeVoltage AS Integer
+DIM LowVoltsAlarm AS Integer
+DIM NoLoadCurrent AS Integer
+DIM NoVoltReads AS Integer
+DIM TurnPot AS Integer
+DIM AccelMixMode AS Integer
+DIM MixAlgo AS Integer
+DIM MaxAmps1 AS Integer
+DIM MaxAmps2 AS Integer
+DIM VoltReads AS Integer
+DIM VoltageReading AS Integer
+DIM BatteryVoltage AS Integer
+DIM PotInput AS Integer
+DIM Pot AS Integer
+DIM Min AS Integer
+DIM Max AS Integer
+DIM DeciAmpSeconds AS Integer
+DIM DeciAmpSecondsUsed AS Integer
+DIM DeciAmpHoursUsed AS Integer
+' declaration of non-integer variables (no user attention needed)
+DIM SpeedPotInstalled AS Boolean
+DIM UseCurrentSensors AS Boolean
+DIM SensorRange AS Integer
+DIM SuppressPrinting AS Boolean
+DIM AllowSerialInput AS Boolean
+
+
+'***************************************************************************************************************
+'***************************************************************************************************************
+'                                           USER SETTINGS BELOW
+'***************************************************************************************************************
+'***************************************************************************************************************
+
+
+'=================================
+' CONFIGURE INPUT/OUTPUTS
+'=================================
+SpeedPotPin = 1           'Analog Input used for SpeedPot (BM3 uses AIN 5, Mowbot uses AIN 1)
+LeftCurrentSensorPin = 4  'Analog Input (Bot uses AIN 4, BM3 uses AIN 7)
+RightCurrentSensorPin = 3 'Analog Input (Bot uses AIN 3, BM3 uses AIN 8)
+AlarmPin = 3              'Digital Output used for low voltage alarm (BM3 = DOUT 5 - unused on Bot - set to 3)
+Brake1Pin = 1 'digital output pin 1
+Brake2Pin = 1 'digital output pin 1
+
+
+
+'=================================
+' JOYSTICK AND SPEEDPOT SETTINGS
+'=================================
+Damping = 1               'Number of joystick readings to moving average. Slows and smoothes response.
+SpeedPotInstalled = FALSE 'Is speed potentiometer installed? (TRUE for BM3 FALSE for Bot)
+DefaultPot = 90             'Default setting if SpeedPotInstalled = FALSE; 90 allows headroom for steer/mixing.
+SpeedPotLowFault = 90     'Chair speed used if pot fails giving too low voltage.
+SpeedPotHighFault = 90    'Chair speed used if pot fails giving too high voltage.
+SpeedPotFwdMax = 100      'Max forward speed @ Max pot setting, set less than 100 if Turn Headroom needed.
+SpeedPotFwdMin = 10      'Max forward speed @ Min pot setting.
+SpeedPotRevMax = 70       'Max reverse speed @ Max pot setting.
+SpeedPotRevMin = 10       'Max reverse speed @ Min pot setting.
+TurnPotFwdMax = 40        'Max Turn Rate going forwards @ Max pot setting. 
+TurnPotFwdMin = 10        'Max Turn Rate going forwards @ Min pot setting.
+TurnPotRevMax = 40        'Max Turn Rate going backwards @ Max pot setting.
+TurnPotRevMin = 10        'Max Turn Rate going backwards @ Min pot setting. 
+TurnAtFullSpeed = 90      '100=no reduction of turn rate with speed, 0=turn rate goes to 0 at full speed.
+
+
+'=================================
+' DRIVING CHARACTERISTICS
+'================================
+' MOTOR ACCELERATIONS/DECELERATION SETTINGS. 
+'Thes override the ACC/DEC settings in the Roboteq configuration.
+ 
+'Base Acceleration and Deceleration rates are set with the Accel and Decel parameters.  A value of 2000
+'(internally treated as 200.0 in the Roboteq controller) for example will give an accel/decel of 200 RPM 
+'change per second (for brushless motors) or 20% of maximum PWM change (200 out of 1000) per second 
+'(for brushed motors).
+Accel = 10000
+Decel = 10000
+
+'Acceleration and Deceleration rates are also dynamically adjusted, to accomplish three things:
+
+'(1) When simultaneously changing speed and turn rate, accel/decel is boosted to give a snappy turn.
+'TurnBoost sets how many times faster the turn rate changes and Throttle = currentSpeed except once 
+'every (TurnBoost+1) LoopCycles so that fore-aft acceleration of the whole vehicle is constant.  
+TurnBoost = 3             'range = 1 to 20.
+
+'(2) For panic stops, BackStickBraking allows for stronger accel/decel if the stick is moved from forward of
+'neutral to aft of neutral or vice versa.  Effect of this is proportional to how far past 0 the stick is moved. 
+'CAUTION: The higher the base value of Decel, the more abrupt the effect of a given BackStickBraking
+BackStickBraking = 110     'Range = 0 - 150
+						  
+'(3) Acceleration is also boosted during heavy mechanical loads (NOT needed for brushless) 
+'accel/decel are made more proportionate to actual RPM changes than the PWM change per unit time that Roboteq
+'uses for brushed motors.  The algorithm uses motor current (MotorComp values)and change of motor current 
+'to do this. Four parameters are provided to give flexibility`in setting this for very different
+'chairs/motor/weights/voltages etc.  However, so far only two of these (LoadBoost_D and LoadBoostCurving)
+'have proven to be needed. */
+
+'CAUTION: the most important of these is LoadBoost_D, the other two parameters will make the boost last longer
+'and be stronger.  Too high a value of LoadBoost_P might be dangerous (similar to too high MotorResistance).
+
+'P term of PID
+LoadBoost_P = 0             'accel/decel boosted proportionate to motor current range 0 - 100
+                            'Causes load-boosted acceleration to be stronger and last longer.
+'I term of PID
+LoadBoost_I = 0             'moving average of last 'n' MotorComp values, range 0 - 10, but USE VERY SMALL 
+                            'VALUES. Causes boosted acceleration to last longer
+'D term of PID
+LoadBoost_D = 10            'increases accel/decel in proportion to change in motor current, range = 0 - 250
+                            'interacts with Accel and Decel; for higher values of LoadBoost_D, use lower values 
+                            'of Accel and Decel'TurnBoost sets how many times faster the turn rate changes.
+
+LoadBoostCurving = 4        'accepts values of 0=linear, 1, 2, 3, 4=exponential. Exponential curving makes
+                            'accel/decel boost disappear more quickly as load decreases
+
+'=================================
+' MOTOR LOAD COMPENSATION SETTINGS
+'=================================
+'Motor currents, measured (if sensors are used) or estimated (if there are no current sensors), are used to 
+'compensate for increased back EMF when loading increases.  MotorCompensation is NOT accrate using Roboteq
+'estimated motor currents, but works well if current sensors are installed.
+UseCurrentSensors = TRUE    'Set to TRUE if using external current sensors on analog inputs 
+                            'LeftCurrentSensorPin and RightCurrentSensorPin. 
+                            'Set to FALSE to use Roboteq's internal motor current estimates. 
+                            'FALSE DOESENT WORK WELL!
+
+SensorRange = 5             'Set to sensitivity of current sensor used (sensor +/- in Amps) (BM3=100, Bot=5).
+
+ 
+'The main setting is MotorResistance which should be set somewhat lower than measured motor resistance
+'(in milliohms) to avoid this positive feedback system causing instability (or even a runaway condition).
+MotorResistance = 1900   
+
+'CompDeadband sets a small deadband to avoid movement if the chair is jostled or if there is joystick noise while
+'not moving.  
+CompDeadband = 20         'Minimum Compensation change that causes an actual change of motor commands.  
+                          'If set too low, brakes may not engage on slopes. 15 = 1.5% of power. 
+                          'range = 5 to 50
+
+'Because heavy loading of casters on some chairs can make it difficult to start a turn when not moving, 
+'CompTurnBoost provides extra compensation in that situation.
+CompTurnBoost = 0         'Milliohms, range is 0 to 500. Works ONLY during turn in place. BUT ADJUST 
+                          'WITH CAUTION just as for MotorResistance.
+
+'The effect of CompTurnBoost decreases linearly as fore-aft power increases and TurnBoostLimit is the speed at which
+'the extra turn-in-place compensation disappears
+TurnBoostLimit = 100       '100 corresponds to 10% of maximum ForeAftPower
+
+
+'=================================
+' PROGRAM TIMING
+'=================================
+MainLoopWaitTime = 0             'milliseconds to wait for each cycle through MainLoop: set to 0 for max loop 
+                                 'speed
+CyclesPerSpeedPotRead = 10/(MainLoopWaitTime+1)  'number of cycles between each read of pot.
+                                 'reduce number of cycles if there is a wait time in main loop.
+TimeBetweenAmpHrReads = 1000     '1000 mSec = 1 second - time interval between checking current draw.
+TimeBetweenAmpHrOutputs = 10000  '10000 msec = 10 seconds - time interval for sending current used to display 
+                                 'device.
+
+
+'=================================
+' MISCELLANEOUS
+'=================================
+SuppressPrinting = TRUE     'Set to TRUE to suppress printing to speed and smooth controller/PC 
+                            'interaction; PRINT of current used will not be suppressed, but is sent only 
+                            'once every vTimeBetweenAmpHrOutputs msec.
+AllowSerialInput = FALSE    'Set to TRUE if using serial joystick or emulation.
+
+
+'=================================
+' BATTERY ALARM/LED/WARNING
+'=================================
+FullRechargeVoltage = 166   'ten times battery voltage; 44.9V = 3.45V/cell - voltage present only. 
+                            'immediately after recharging -- used to reset AmpHrs-used measurement to 0.
+LowVoltsAlarm = 144         'tenths of volts, 410 = 3.14V/cell for 13s pack.
+NoLoadCurrent = 1           'current with no motors running (20 = 2 Amps) YOU SHOULD CHECK THIS ON YOUR CHAIR 
+                            'AND SET THE VALUE JUST OVER WHAT YOU MEASURE.
+NoVoltReads = 100           'no. of times to read quiescent volts before averaging.
+
+
+'***************************************************************************************************************
+'***************************************************************************************************************
+'                                              END USER SETTINGS
+
+'         IT SHOULD NOT BE NECESSARY TO MAKE CHANGES BELOW - ALL OPTIONS ARE SET IN USER SETTING SECTION
+'***************************************************************************************************************
+'***************************************************************************************************************
+
+'setting limits for driving parameters
+IF TurnBoost < 1 THEN
+  TurnBoost = 1
+ELSEIF TurnBoost > 20 THEN
+  TurnBoost = 20
+END IF
+IF BackStickBraking < 0 THEN
+  BackStickBraking = 0
+ELSEIF BackStickBraking > 150 THEN
+  BackStickBraking = 150
+END IF
+IF LoadBoost_P < 0 THEN
+  LoadBoost_P = 0
+ELSEIF LoadBoost_P > 20 THEN
+  LoadBoost_P = 20
+END IF
+IF LoadBoost_I < 0 THEN
+  LoadBoost_I = 0
+ELSEIF LoadBoost_I > 10 THEN
+  LoadBoost_I = 10
+END IF
+IF LoadBoost_D < 0 THEN
+  LoadBoost_D = 0
+ELSEIF LoadBoost_D > 250 THEN
+  LoadBoost_D = 250
+END IF
+IF CompDeadband < 5 THEN
+  CompDeadband = 5
+ELSEIF CompDeadband > 50 THEN
+  CompDeadband = 50
+END IF
+IF LoadBoostCurving < 0 THEN
+  LoadBoostCurving = 0
+ELSEIF LoadBoostCurving > 4 THEN
+  LoadBoostCurving = 4
+END IF
+IF CompTurnBoost < 0 THEN
+  CompTurnBoost = 0
+ELSEIF CompTurnBoost > 500
+  CompTurnBoost = 500
+END IF
+
+' INITIALIZE SCRIPT AT STARTUP: this section runs just once
+Pot = SpeedPot
+DIM LoopCycles AS Integer
+LoopCycles = 0
+TurnPot = TurnPotFwdMin
+IF SuppressPrinting = FALSE THEN
+  PRINT ("READ Mixing Mode \n")
+END IF
+AccelMixMode = 2
+MixAlgo = GetConfig (_MXMD) 'valid numbers are 1 and 2
+IF (MixAlgo = 1) OR (MixAlgo = 2) THEN
+  AccelMixMode = MixAlgo
+END IF
+'the following override the settings in the Roboteq configuration
+'will be changed back if we figure out how to use GetConfig (_MAC) and GetConfig (_MDEC)
+DIM BaseM1Accel AS Integer
+DIM BaseM1Decel AS Integer
+DIM BaseM2Accel AS Integer
+DIM BaseM2Decel AS Integer
+BaseM1Accel = Accel
+BaseM1Decel = Decel
+BaseM2Accel = Accel
+BaseM2Decel = Decel
+lastM1Accel = Accel
+lastM1Decel = Decel
+lastM2Accel = Accel
+lastM2Decel = Decel
+
+'SetConfig (_MDEC,1,Decel)
+'SetConfig (_MDEC,2,Decel)
+'SetConfig (_MAC,1,Accel)
+'SetConfig (_MAC,2,Accel)
+
+'BaseM1Accel = GetConfig (_MAC, 1)
+'BaseM1Decel = GetConfig (_MDEC, 1)
+'BaseM2Accel = GetConfig (_MAC, 2)
+'BaseM2Decel = GetConfig (_MDEC, 2)
+'WARNING: if _ALIM is changed while script is running, repeat the next few lines at that point to update 
+'vMaxAmps
+IF UseCurrentSensors = FALSE THEN
+  IF SuppressPrinting = FALSE THEN
+    PRINT ("\n", "READ MaxAmp SETTINGS FOR Motor1 AND Motor2 = 10X Amps \n")
+  END IF
+  MaxAmps1 = GetConfig (_ALIM, 1)
+  MaxAmps2 = GetConfig (_ALIM, 2)
+END IF
+DIM Pactive AS Boolean
+DIM Aactive AS Boolean
+DIM Sactive AS Boolean
+Sactive = FALSE
+Pactive = FALSE
+Aactive = FALSE
+SetTimerCount(1, TimeBetweenAmpHrReads) 'Setup a timer for accumulating AmpHr readings
+SetTimerState(1, 0) 'start timer
+SetTimerCount(2, TimeBetweenAmpHrOutputs) 'Setup a timer for sending AmpHr info to display device
+SetTimerState(2, 0) 'start timer
+VoltReads = 0			'no of times quiescent volts have been read so far
+VoltageReading = 0		'battery volts when no load
+'find current sensor neutral values to adjust zero point when ILeft and IRight later used
+DIM ILeftAdj AS Integer
+DIM IRightAdj AS Integer
+GoSub CheckSensorZero
+IF SuppressPrinting = FALSE THEN
+   PRINT ("\n", "READ BatteryVoltage in 10X volts units \n")
+END IF
+BatteryVoltage = GetValue (_V, 2)
+IF BatteryVoltage >= FullRechargeVoltage THEN
+   SetCommand (_VAR, 1 , 0) 're-set DeciAmpSecondsUsed to 0
+   'this is done only once at startup so that renerative voltage doesn't reset AmpHrs
+END IF
+VoltReads = 0			'no of times quiescent volts have been read so far
+VoltageReading = 0		'battery volts when no load
+IF (Damping > 20) THEN
+  Damping = 20
+END IF
+DIM JSRead AS Integer
+JSRead = 0 ' counter used for damping (joystick moving average)
+Brake1Bit = Brake1Pin-1
+Brake1Mask = 1 << Brake1Bit
+Brake2Bit = Brake2Pin-1
+Brake2Mask = 1 << Brake2Bit
+BrakesMask = Brake1Mask OR Brake2Mask
+
+'MAIN LOOP is an unending loop that repeats as long as script is active
+MainLoop:
+  DIM Throttle AS Integer
+  DIM Steering AS Integer
+  IF SuppressPrinting = FALSE THEN
+    PRINT ("\n","START OF MAIN LOOP cycle ", LoopCycles + 1 , "\n")
+  END IF
+  GoSub FindMode
+  GoSub SetThrottleSteering 'Throttle & Steering are copies of channel 1 and channel 2 values used within script
+  IF SuppressPrinting = FALSE THEN
+    PRINT ("Joystick THROTTLE = ", Throttle, "     Joystick STEERING = ", Steering, "\n")
+  END IF
+  GoSub SpeedPot
+  GoSub ScaleThrottle
+  GoSub ScaleSteering
+  GoSub MotorCompensation
+  GoSub MixAccel
+  GoSub SetMotors
+  IF LoopCycles MOD 500 = 0 THEN
+  '   PUT ANYTHING HERE THAT YOU WANT DONE ONCE EVERY 500 LoopCycles
+    GoSub CheckSensorZero
+  END IF      
+  Wait (MainLoopWaitTime)
+  GoSub VoltAlarm
+  IF GetTimerState (1) = 1 THEN 'accumulate DeciAmpHours used once a second
+    GoSub IUsed
+  END IF
+  LoopCycles = LoopCycles + 1
+GoTo MainLoop
+
+'SUBROUTINES CALLED FROM MAIN LOOP
+CheckSensorZero:
+DIM M1Power AS Integer
+DIM M2Power AS Integer
+DIM M1Calc AS Integer
+DIM M2Calc AS Integer
+'re-check offset at startup and periodically when motor commands and powers = 0
+DIM i AS Integer
+DIM ISum AS Integer
+  IF UseCurrentSensors = TRUE THEN
+    GoSub MCalc
+    IF (M1Power = 0) AND (M2Power = 0) AND (M1Calc = 0) AND (M2Calc = 0) THEN
+'find motor currents: ignore first GetValue to give caps time to discharge
+      ILeftAdj = GetValue (_AIC, LeftCurrentSensorPin)
+      ISum = 0
+      FOR i = 1 AndWhile (i <= 10)
+        ISum = ISum+GetValue (_AIC, LeftCurrentSensorPin)
+      NEXT
+      ILeftAdj = ISum/10
+      IRightAdj = GetValue (_AIC, RightCurrentSensorPin)
+      ISum = 0
+      FOR i = 1 AndWhile (i <= 10)
+        ISum = ISum+GetValue (_AIC, RightCurrentSensorPin)
+      NEXT
+      IRightAdj = ISum/10
+    END IF
+  END IF
+RETURN ' end of CheckSensorZero
+
+FindMode:
+  DIM S1 AS Integer
+  DIM S2 AS Integer
+  DIM P1 AS Integer
+  DIM P2 AS Integer
+  DIM A1 AS Integer
+  DIM A2 AS Integer
+  DIM Mode AS Integer
+  IF AllowSerialInput THEN
+    IF SuppressPrinting = FALSE THEN
+      PRINT ("\n", "READ SERIAL INPUT VALUES 0-1000 \n")
+    END IF
+    S1 = getvalue(_CIS,1) 'SERIAL INPUT MODE
+    S2 = getvalue(_CIS,2) 'SERIAL INPUT MODE
+    Sactive = TOBOOL (abs(S1)+abs(S2) > 0)
+  END IF
+  IF SuppressPrinting = FALSE THEN
+    PRINT ("\n", "READ PULSE INPUT VALUES 0-1000 \n")
+  END IF
+  IF (Sactive = FALSE)
+    P1 = getvalue(_CIP,1) 'PULSE INPUT MODE
+    P2 = getvalue (_CIP,2) 'PULSE INPUT MODE
+    Pactive = TOBOOL (abs(P1)+abs(P2) > 0)
+  END IF
+  IF ((Sactive = FALSE) AND (Pactive = FALSE))
+    IF SuppressPrinting = FALSE THEN
+      PRINT ("\n", "READ ANALOG INPUT VALUES 0-1000 \n")
+    END IF
+    A1 = getvalue(_CIA,1) 'ANALOG INPUT MODE
+    A2 = getvalue (_CIA,2) 'ANALOG INPUT MODE
+    Aactive = TOBOOL (abs(A1)+abs(A2) > 0)
+  END IF
+  IF Sactive THEN
+    Mode = 1
+  ELSEIF Pactive THEN
+    Mode = 2
+  ELSEIF Aactive THEN
+    Mode = 3
+  ELSE
+    Mode = 0
+  END IF
+  'PRINT ("\n","Mode = ", Mode, "\n \n")
+RETURN ' end of FindMode:
+
+SetThrottleSteering:
+  DIM SumThrottle AS Integer
+  DIM SumSteering AS Integer
+  DIM ThrottleStack[20] as INTEGER
+  DIM SteeringStack[20] as INTEGER
+  IF Mode = 1 THEN
+    Throttle = S1
+    Steering = S2
+  ELSEIF Mode = 2 THEN
+    Throttle = P1
+    Steering = P2
+  ELSEIF Mode = 3 THEN
+    Throttle = A1
+    Steering = A2
+  ELSE 'no input mode detected so make sure Throttle and Steering = 0
+    Throttle = 0
+    Steering = 0
+  END IF
+' if Damping > 1 use stacks to find running average
+  IF (Damping > 1) THEN
+' put new values in arrays using circular index
+    ThrottleStack[JSRead]=Throttle
+    SteeringStack[JSRead]=Steering
+    JSRead = JSRead + 1
+    IF (JSRead>=Damping)THEN
+      JSRead = 0
+    END IF
+' average cells
+    SumThrottle = 0
+    SumSteering = 0
+    FOR i = 0 AndWhile (i <= (Damping -1))
+      SumThrottle = SumThrottle + ThrottleStack[JSRead]
+      SumSteering = SumSteering + SteeringStack[JSRead]
+	NEXT
+    Throttle = SumThrottle/Damping
+    Steering = SumSteering/Damping
+  END IF
+RETURN ' end of SetThrottleSteering:
+
+
+SpeedPot:
+  IF (LoopCycles MOD CyclesPerSpeedPotRead) = 0 THEN
+    IF SpeedPotInstalled=TRUE THEN
+'5k speed pot with 220 ohm resistors to limit to 0.2 to 4.8 V connected to
+'analog input 5 and calibrated to 50 to 950 for pot min and max
+'DO NOT CONFIGURE ANY OUT OF RANGE TRIGGERS; we want chair to be 
+'driveable even if speed pot fails, but at reduced speeds for safety!
+      IF SuppressPrinting = FALSE THEN
+        PRINT ("\n", "READ SPEED POT, RANGE = 50-950, <21 and >979 ARE FAULTS, 21-49 and 951-979 are buffer zones \n")
+      END IF
+      PotInput = GetValue (_AIC, SpeedPotPin)
+'detect "overvoltage" if over 4.9 V and "undervoltage" if under 0.1 V,
+'detection points set outside pot calibration to account for resistor tolerance
+'and change of vale over time/temperature -- this produces "fudge zones" between 951 and 979
+'and between 21 and 49 that are set to 100% and vPotMin respectively 
+      IF PotInput > 979 THEN 'over 4.9 V on analog pin
+        IF SuppressPrinting = FALSE THEN
+          PRINT ("\n", "WARNING Speed Pot High Error - max driving speed reduced to SpeedPotHighFault \n")
+        END IF
+        SpeedPot = SpeedPotHighFault '% of full speed
+        TurnPot = TurnPotFwdMin 'turn to min if pot failure
+      ELSEIF PotInput < 21 ' less than 2.75 V on analog pin
+        IF SuppressPrinting = FALSE THEN
+          PRINT ("\n", "WARNING: Speed Pot Low Error - max driving speed reduced to SpeedPotLowFault \n")
+        END IF
+        SpeedPot = SpeedPotLowFault '% of full speed
+        TurnPot = TurnPotFwdMin 'turn to min if pot failure
+      ELSE
+   'Scale 50 to 950 PotInput to 0 to 1000
+        Pot = ((PotInput-50)*(100)/90)
+   'Divide by ten to get pot setting in percent
+        Pot = (Pot)/10
+   'Check extremes in case component values have shifted into "fudge zones" from 20 to 50 and 950 to 980
+        IF Pot > 100 THEN
+          Pot = 100
+        END IF 
+        IF Pot < 0 THEN
+          Pot = 0
+        END IF
+        IF SuppressPrinting = FALSE THEN
+          PRINT ("SPEED POT set to " , Pot , "% \n")
+        END IF
+      END IF
+    ELSE 'speed pot not installed
+      Pot = DefaultPot
+    END IF 'end of IF SpeedPotInstalled=TRUE
+    IF (Throttle >=0)THEN
+      Min = SpeedPotFwdMin
+      Max = SpeedPotFwdMax
+    ELSE
+      Min = SpeedPotRevMin
+      Max = SpeedPotRevMax
+    END IF
+    SpeedPot = ((Max-Min)*Pot)/100 + Min
+    IF (Throttle > -150) THEN ' use Fwd turn values when at or above "turn in place"
+      Min = TurnPotFwdMin
+      Max = TurnPotFwdMax
+    ELSE ' use Rev turn values only when definitely going backwards
+      Min = TurnPotRevMin
+      Max = TurnPotRevMax
+    END IF
+    TurnPot = ((Max-Min)*Pot)/100 + Min
+  END IF 'end of IF (LoopCycles MOD CyclesPerSpeedPotRead) = 0
+RETURN 'End of "SpeedPot:"
+
+ScaleThrottle:
+  DIM PercentThrottle AS Integer
+  PercentThrottle = abs(Throttle*100)/1000 ' used in MixAccel
+  Throttle = (SpeedPot*Throttle)/100
+  IF SuppressPrinting = FALSE THEN
+      PRINT ("THROTTLE/STEER scaled Throttle = " , Throttle , "     ")
+   END IF
+RETURN 'End of "ScaleThrottle:"
+
+ScaleSteering:
+  DIM RelSpeed AS Integer
+  DIM TurnReduction AS Integer
+  Steering = (TurnPot*Steering)/100
+'I think that RelSpeed = PercentThrottle from above ScaleThrottle subroutine. Check this and remove
+'extra calculation if possible
+  IF (Throttle < 0) THEN
+    RelSpeed = (Throttle*100)/-1000
+  ELSE
+    RelSpeed = (Throttle*100)/1000
+  END IF
+  TurnReduction = (RelSpeed*(100-TurnAtFullSpeed))/100
+  Steering = ((100-TurnReduction)*Steering)/100
+  IF SuppressPrinting = FALSE THEN
+    PRINT ("THROTTLE/STEER scaled Steering = " , Steering , "\n")
+  END IF
+RETURN 'End of "ScaleSteering:"
+
+MotorCompensation:
+'NOTE: extra boost at low speeds only applies to ESTIMATED current;
+'if SENSORS are used boost calculation is ignored
+  DIM ILeft AS Integer
+  DIM IRight AS Integer
+'  DIM BoostFactor AS Integer
+  DIM M1 AS Integer
+  DIM M2 AS Integer
+  DIM BattVolts AS Integer
+  DIM M1Comp AS Integer
+  DIM M2Comp AS Integer
+  DIM Num AS Integer
+  DIM M1Stack[20] as INTEGER
+  DIM M2Stack[20] as INTEGER
+  DIM SumM1Comp AS Integer
+  DIM SumM2Comp AS Integer
+  DIM oldM1Comp AS Integer
+  DIM oldM2Comp AS Integer
+  DIM oldThrottle AS Integer
+  DIM oldSteering AS Integer
+  DIM BrakesSet AS Boolean
+
+'find motor currents
+  IF UseCurrentSensors = TRUE THEN
+    IF SuppressPrinting = FALSE THEN
+      PRINT ("\n", "READ 10X M1 AND M2 CURRENT SENSOR VALUES \n")
+    END IF
+    ILeft = GetValue (_AIC, LeftCurrentSensorPin) 'discard first read to avoid cross talk between analog pins
+    ILeft = GetValue (_AIC, LeftCurrentSensorPin) - ILeftAdj
+    IRight = GetValue (_AIC, RightCurrentSensorPin) 'discard first read to avoid cross talk between analog pins
+    IRight = GetValue (_AIC, RightCurrentSensorPin)-IRightAdj
+  ELSE
+    IF SuppressPrinting = FALSE THEN
+      PRINT ("\n", "READ 10X M1 AND M2 CURRENT ESTIMATES \n")
+    END IF
+    ILeft = GetValue (_A, 1) 'estimated current in units of 10X Amps for left motor (1 unit = 10 mA)
+    IRight = GetValue (_A, 2) 'estimated current in units of 10X Amps for right motor (1 unit = 10 mA)
+'FOLLOWING HAS BEEN REMOVED, BUT MAY NEED TO BE PUT BACK FOR BRUSHLESS MOTORS - SEE WILL'S SCRIPT
+ ' boost motor compensation at low currents to deal with error in motor current estimation and/or
+ ' increased impedance of brushless motors at low output
+'ABOVE HAS BEEN REMOVED, BUT MAY NEED TO BE PUT BACK FOR BRUSHLESS MOTORS - SEE WILL'S SCRIPT
+    IF SuppressPrinting = FALSE THEN
+      PRINT ("Estimated current: Left = ", ILeft, "  Right = ", IRight,"\n")
+	END IF
+  END IF
+
+'find running averages of old MiComp to apply LoadBoost_I
+  IF (LoadBoost_I > 1) THEN
+    M1Stack[Num]=M1Comp
+    M2Stack[Num]=M2Comp
+    Num = Num + 1
+    IF (Num>=LoadBoost_I)THEN
+      Num = 0
+    END IF
+  ' average cells
+    SumM1Comp = 0
+    SumM2Comp = 0
+    FOR i = 0 AndWhile (i <= (LoadBoost_I-1))
+      SumM1Comp = SumM1Comp + M1Stack[i]
+      SumM2Comp = SumM2Comp + M2Stack[i]
+    NEXT
+    oldM1Comp = SumM1Comp/LoadBoost_I
+    oldM2Comp = SumM2Comp/LoadBoost_I
+  ELSE 'no running average
+    oldM1Comp = M1Comp
+    oldM2Comp = M2Comp
+  END IF
+
+ 'do mixing to find motor values (DO NOT TRUNCATE - will be un-mixing later)
+  M1 = Throttle + Steering
+  M2 = Throttle - Steering
+
+'apply IR compensation; everything converted from volts to 0-1000 joystick units and *100/10 used to reduce granularity
+  M1Comp = 0
+  M2Comp = 0
+  BattVolts = GetValue (_V, 2)
+'increase Comp for turn-in-place
+'max boost at ForeAftPower = 0, tapering to no boost at ForeAftePower = TurnBoostLimit (% of fore/aft power)
+  DIM ForeAftPower AS Integer
+  ForeAftPower = (abs(GetValue(_MOTPWR,1)+GetValue(_MOTPWR,2)))/2
+  DIM PercentExtraComp AS Integer
+  IF (abs(Steering) > 10) AND (ForeAftPower < TurnBoostLimit) THEN
+    PercentExtraComp = (TurnBoostLimit - ForeAftPower)*100/TurnBoostLimit
+  ELSE
+    PercentExtraComp = 0
+  END IF
+  M1Comp = (10*ILeft*(MotorResistance+(CompTurnBoost*PercentExtraComp)/100))/BattVolts
+  M2Comp = (10*IRight*(MotorResistance+(CompTurnBoost*PercentExtraComp)/100))/BattVolts
+  IF UseCurrentSensors = TRUE THEN
+    M1Comp = (M1Comp*SensorRange)/100
+    M2Comp = (M2Comp*SensorRange)/100
+  END IF
+'modify motor command values in accord with motor compensation
+  M1 = (10*M1 + M1Comp)/10
+  M2 = (10*M2 + M2Comp)/10
+'undo mixing to get back new THROTTLE and STEER values
+  oldThrottle = Throttle
+  oldSteering = Steering
+  Throttle = ((10*M1 + 10*M2)/2)/10
+  Steering = ((10*M1 - 10*M2)/2)/10
+'ignore small changes to avoid brake clicking and motor judder if motor milliohms set high
+'and make sure if stick has been centered BrakeDelay msec that physically jostling the chair 
+'can't release the brakes
+
+'this version uses a timer rather than Roboteq brake digout to decide BrakesSet so that
+'it can work with devices that don't actually have brakes
+'  DIM MotorsOff AS Boolean
+'    MotorsOff = (abs(GetValue (_MOTPWR, 1))<=5) AND (abs(GetValue (_MOTPWR, 2))<=5)
+'  IF NOT MotorsOff THEN
+'    SetTimerCount(0, 100) 'reset brakeset timer
+'    SetTimerState(0, 0) 'start timer
+'    BrakesSet = FALSE
+'  ELSEIF GetTimerState(0) = 0 THEN
+'    BrakesSet = TRUE
+'  END IF
+'alternative reading brake digouts instead of using timer
+  BrakesSet = ((GetValue (_DIGOUT) AND BrakesMask)=0)
+
+  IF (abs(oldThrottle-Throttle) <= CompDeadband) OR (BrakesSet = TRUE) THEN
+    Throttle = oldThrottle
+  END IF
+  IF (abs(oldSteering-Steering) <= CompDeadband) OR (BrakesSet = TRUE) THEN
+    Steering = oldSteering
+  END IF
+'truncate in case compensation pushed THROTTLE and/or STEER over limits
+  IF (Throttle > 1000) THEN 
+    Throttle = 1000
+  END IF
+  IF (Throttle < -1000) THEN
+    Throttle = -1000
+  END IF
+  IF (Steering > 1000) THEN
+    Steering = 1000
+  END IF
+  IF (Steering < -1000) THEN
+    Steering = -1000
+  END IF
+  IF SuppressPrinting = FALSE THEN
+    PRINT ("compensated THROTTLE = " , Throttle , "    compensated STEER = " , Steering, "\n")
+  END IF
+RETURN 'End of "MotorCompensation:"
+
+MCalc:
+  DIM DeltaM AS Integer
+  M1Calc = Throttle + Steering
+  M2Calc = Throttle - Steering
+'do mixing to find motor-equivalents of command values
+  IF  (MixAlgo = 1) THEN
+  'truncate to 1000 or -1000
+    IF M1Calc > 1000 THEN
+      M1Calc = 1000
+    END IF
+    IF M1Calc < -1000 THEN
+      M1Calc = -1000
+    END IF
+  'truncate to 1000 or -1000
+    IF M2Calc > 1000 THEN
+      M2Calc = 1000
+    END IF
+    IF M2Calc < -1000 THEN
+      M2Calc = -1000
+    END IF
+  ELSEIF MixAlgo = 2 THEN
+	deltaM = 0
+    IF abs(M1Calc) > 1000 THEN 'M1Calc exceeds +/-1000 -- find excess and modify M1Calc and M2Calc by delta
+      deltaM = abs(M1Calc)-1000
+	ELSEIF abs(M2Calc) > 1000 THEN 'M2Calc exceeds +/-1000 -- find excess and modify M1Calc and M2Calc by delta
+	  deltaM = abs(M2Calc)-1000
+	END IF 'if a calcMxPower out of range, calculate delta adjustment
+	IF deltaM > 0 THEN 'if a calcMxPower is out of range, use deltaM to adjust
+    'forward
+      IF Throttle>0 THEN
+        M1Calc = M1Calc-deltaM
+        M2Calc = M2Calc-deltaM
+	'back
+	  ELSEIF Throttle<0 THEN
+	    M1Calc = M1Calc+deltaM
+		M2Calc = M2Calc+deltaM
+	  END IF 'M1Calc truncated to +/-1000 with difference added to or subtraced from M2Calc
+	END IF 'deltaM > 0
+  END IF 'MixAlgo = 1 ELSE MixAlgo = 2
+  Throttle = (M1Calc+M2Calc)/2
+  Steering = (M1Calc-M2Calc)/2
+RETURN 'end of MCalc:
+
+MixAccel:
+  DIM M1Decel AS Integer
+  DIM M2Decel AS Integer
+  DIM M1Accel AS Integer
+  DIM M2Accel AS Integer
+  DIM MovingForward AS Boolean
+  DIM MovingBack AS Boolean
+  DIM ThrottleForward AS Boolean
+  DIM ThrottleBack AS Boolean
+  DIM ThrottleCross0 AS Boolean
+  DIM Boost AS Integer
+  M1Decel = BaseM1Decel
+  M2Decel = BaseM2Decel
+  M1Accel = BaseM1Accel
+  M2Accel = BaseM2Accel
+  M1Power = GetValue (_MOTPWR, 1)
+  M2Power = GetValue (_MOTPWR, 2)
+  GoSub MCalc
+  GoSub TurnMix
+  GoSub LoadBoost
+  GoSub ThrottleCrossZero
+  SetCommand (_DECEL,1,M1Decel)
+  SetCommand (_DECEL,2,M2Decel)
+  SetCommand (_ACCEL,1,M1Accel)
+  SetCommand (_ACCEL,2,M2Accel)
+'in older firmware, _DECEL and _ACCEL did nothing, used _MDEC and _MAC instead
+'  SetConfig (_MDEC,1,M1Decel)
+'  SetConfig (_MDEC,2,M2Decel)
+'  SetConfig (_MAC,1,M1Accel)
+'  SetConfig (_MAC,2,M2Accel)
+  lastM1Accel = M1Accel
+  lastM1Decel = M1Decel
+  lastM2Accel = M2Accel
+  lastM2Decel = M2Decel
+RETURN 'End of "MixAccel:"
+
+TurnMix:
+  DIM currentTurnRate AS Integer
+  DIM currentSpeed AS Integer
+  currentTurnRate = (M1Power-M2Power)/2
+  IF abs(Steering-currentTurnRate) > 2 'turn changing
+    currentSpeed = (M1Power+M2Power)/2
+	IF abs(Throttle-currentSpeed) > 2 'speed changing during changing turn
+      IF (LoopCycles MOD (TurnBoost+1)) <> 0 THEN
+        Throttle = currentSpeed
+      END IF
+    END IF 'end of "speed changing during turn"
+	GoSub MCalc
+'increase acceleration and deceleration by TurnBoost if turn changing
+    M1Accel = M1Accel*TurnBoost
+    M2Accel = M2Accel*TurnBoost
+    M1Decel = M1Decel*TurnBoost
+    M2Decel = M2Decel*TurnBoost
+  END IF 'end of "turn changing"
+RETURN 'END of TurnMix:
+
+LoadBoost:
+  DIM MC1AccelDelta AS Integer
+  DIM MC1DecelDelta AS Integer
+  DIM MC2AccelDelta AS Integer
+  DIM MC2DecelDelta AS Integer
+  DIM Diff1 AS Integer
+  DIM Diff2 AS Integer
+  Threshold = 10 'minimum d(MotorComp)/dT to get accel/decel boost
+  MC1AccelDelta = 0
+  MC1DecelDelta = 0
+  MC2AccelDelta = 0
+  MC2DecelDelta = 0
+'boost Accel and Decel if MotorCompensation has changed
+  IF ((oldM1Comp>=0) AND (M1Comp >=0)) OR ((oldM1Comp<0) AND (M1Comp<0)) THEN
+    Diff1 = abs(oldM1Comp - M1Comp)
+  ELSE
+    Diff1 = abs(oldM1Comp) + abs(M1Comp)
+  END IF
+  IF ((oldM2Comp>=0) AND (M2Comp >=0)) OR ((oldM2Comp<0) AND (M2Comp<0)) THEN
+    Diff2 = abs(oldM2Comp - M2Comp)
+  ELSE
+    Diff2 = abs(oldM2Comp) + abs(M2Comp)
+  END IF
+  DIM Diff1Squared AS Integer
+  DIM Diff2Squared AS Integer
+  Diff1Squared = (Diff1*Diff1)/100
+  Diff2Squared = (Diff2*Diff2)/100
+  IF LoadBoostCurving = 4 THEN
+    Diff1 = Diff1Squared
+    Diff2 = Diff2Squared
+  ELSEIF LoadBoostCurving = 3 THEN
+    Diff1 = (Diff1Squared*2+Diff1)/3
+    Diff2 = (Diff2Squared*2+Diff2)/3
+  ELSEIF LoadBoostCurving = 2 THEN
+    Diff1 = (Diff1Squared+Diff1)/2
+    Diff2 = (Diff2Squared+Diff2)/2
+  ELSEIF LoadBoostCurving = 1 THEN
+    Diff1 = (Diff1Squared+Diff1*2)/3
+    Diff2 = (Diff2Squared+Diff2*2)/3
+  END IF
+  IF Diff1>Threshold THEN
+' boost M1 accel and decel
+    M1Accel = M1Accel + (Accel*M1Comp*LoadBoost_P)/1000000 + (Accel*LoadBoost_D*Diff1)/10000
+    M1Decel = M1Decel + (Decel*M1Comp*LoadBoost_P)/1000000 + (Decel*LoadBoost_D*Diff1)/10000
+  END IF
+  IF Diff2>Threshold THEN
+' boost M2 accel and decel
+  	M2Accel = M2Accel + (Accel*M2Comp*LoadBoost_P)/1000000 + (Accel*LoadBoost_D*Diff2)/10000
+  	M2Decel = M2Decel + (Decel*M2Comp*LoadBoost_P)/1000000 + (Decel*LoadBoost_D*Diff2)/10000
+  END IF
+RETURN ' end LoadBoost:
+  
+ThrottleCrossZero:
+  MovingForward = (M1Power+M2Power)>0
+  MovingBack = (M1Power+M2Power)<0
+  ThrottleForward = Throttle>0
+  ThrottleBack = Throttle<0
+  ThrottleCross0 = (MovingForward AND ThrottleBack) OR (MovingBack AND ThrottleForward)
+  IF ThrottleCross0 THEN
+    Boost = 100+(BackStickBraking*PercentThrottle)/100
+    M1Accel = (M1Accel*Boost)/100
+    M2Accel = (M2Accel*Boost)/100
+    M1Decel = (M1Decel*Boost)/100
+    M2Decel = (M2Decel*Boost)/100
+  END IF
+RETURN ' end of ThrottleCrossZero
+
+SetMotors:
+    SetCommand (_G, 1, Throttle)
+    SetCommand (_G, 2, Steering)
+RETURN 'SetMotors:
+
+IUsed:
+  IF SuppressPrinting = FALSE THEN
+    PRINT ("\n", "READ BATTERY CURRENT AS 10X AMPS \n")
+  END IF
+  I = GetValue (_BATAMPS)
+  DeciAmpSeconds = (I*TimeBetweenAmpHrReads)/1000
+  IF SuppressPrinting = FALSE THEN
+    PRINT ("\n", "READ stored DeciAmpSecondsUsed \n")
+  END IF
+  DeciAmpSecondsUsed = GetValue (_VAR, 1)
+  DeciAmpSecondsUsed = DeciAmpSecondsUsed + DeciAmpSeconds
+  DeciAmpHoursUsed = (DeciAmpSecondsUsed/60)/60
+  SetCommand (_VAR, 1 , DeciAmpSecondsUsed)
+  IF SuppressPrinting = FALSE THEN
+    PRINT ("DeciAmpSecondsUsed = " , DeciAmpSecondsUsed, "  TenthsOfAmpHr used = " , DeciAmpHoursUsed, "\n")
+  END IF
+  SetTimerCount(1, TimeBetweenAmpHrReads) 'reset timer for next current reading
+  SetTimerState(1, 0) 'start timer
+  IF GetTimerState (2) = 1 THEN
+    IF SuppressPrinting = FALSE THEN
+      PRINT ("Value of DeciAmpSecondsUsed sent to display device \n")
+    END IF
+    PRINT ("999", " " , DeciAmpSecondsUsed , "\n") '"999" lets Arduino know that next number is cumulative durrent
+    SetTimerCount(2, TimeBetweenAmpHrOutputs) 'reset timer for sending AmpHr info to display device
+    SetTimerState(2, 0) 'start timer
+  END IF
+RETURN 'End of "IUsed:"
+
+VoltAlarm:
+  IF GetValue (_BATAMPS) < NoLoadCurrent THEN
+    VoltageReading = VoltageReading + GetValue (_V, 2)
+    VoltReads = VoltReads + 1
+    IF SuppressPrinting = FALSE THEN
+      PRINT ("summed VoltageReading = ", VoltageReading, "  after ", VoltReads, " reads \n")
+    END IF
+	IF VoltReads >= NoVoltReads THEN
+	  VoltageReading = VoltageReading/NoVoltReads
+	  VoltReads = 0
+	  IF VoltageReading < LowVoltsAlarm THEN
+	    SetCommand(_DSET, AlarmPin)
+	  ELSE
+	    SetCommand(_DRES, AlarmPin)
+	  END IF
+      VoltageReading = 0
+    END IF
+  END IF
+RETURN
+
+'***************************************************************************************************************
+'***************************************************************************************************************
+'                                                End of script
+'                                                 CHANGE LOG
+'***************************************************************************************************************
+'***************************************************************************************************************
+
+'2012_09_12 added counting MainLoop cycles and MOD calculation to call subroutines every nth cycle,
+'            SpeedPot subroutine and  IUsed subroutine that reports cumulative tenths of AmpHrs used
+'          from when script starts to run.
+
+'2012_09_19 added option of using Roboteq motor current estimates instead of external sensors for motor compensation
+'         added boolean variables at beginning to allow choice of various options without modifying code
+'         corrected error in IUsed subroutine.
+
+'2012_09_22 change IUsed timing to countdown timer as clock is in seconds rather than milliseconds
+'          store DeciAmpHours used as _VAL, 1 in flash memory and retrieve last value each time controller 
+'          is turned on and script is run
+
+'2012_09_25 changed FindMode to use Roboteq status flag value
+'          added automatic reset of current used to 0 when battery voltage is high just after recharging
+'          added another timer to PRINT current usage at longer intervals (this PRINT line is not suppressed by
+'          bSuppressPrinting = TRUE as it will go to display device rather than being program flow information)
+
+'2014_03_17 corrected _FS values for Serial, Pulse and Analog input and order of use of these inputs
+'          removed vSpeedPot values from calculation of turn rates (alternatives with vSpeedPot commented out)
+
+'2014_03_19 removed findmode by _FS value for all inputs.  Analog and pulse inputs determined by value with pulse 
+'         taking priority over analog - Added by William Clark and not the original script author
+'         Williamclark77 Posts: 120Joined: Thu Mar 21, 2013 12:18 amLocation: South Mississippi, United States
+
+'2014_04_08 added vPotTurnWeight to allow reduced effect of speed pot on turn rate (from experience of Williamclark77)
+
+'2014_04_21 removed Polish notation on variable names (serves no purpose with MicroBasic)
+'
+'			added adjustable TurnAtFullSpeed to reduce turn rate as speed increases (especially for FWD chairs)
+'			(from experience of rheacock) (see code at about line 271)
+'
+'			added adjustable MotorCompensation boost at low currents, based on experience of Williamclark77 with
+'			Roboteq estimation of motor current with brushless motors (may not be needed with brushed motors, or
+'           if motor current measured with external sensors. (see code at about line 322)
+'
+' NOTE the above modifications were made only in the ThrStr subroutines, but not the M1M2 subroutines,
+' as mixing does seem to be downstream of the joystick channels.  
+' Once that is confirmed by proper behavior of motor compensationl, the M1M2 procedures should be removed
+' from the script.  If, instead, it turns out that mixing is upstream, this functionality will have to 
+' be added to the M1M2 subroutines.
+'
+'			added low voltage output as requested by Burgerman, see VoltAlarm: subroutine.  Pin assignment in line 70
+'           must be adjusted as needed depending on which digital output pins have been assigned to other functions
+'           in Roborun.
+'A number of variables have been added as User Settings for these additions
+'
+'           reduced default MainLoopWaitTime to 0, but noticed a divide by 0 error in adjustment of CyclesPerSpeedPotRead
+'           when MainLoopWaitTime is 0.  Fixed.
+
+'2014_04_22 All M1M2 subroutines and possibility to select them removed as mixing appears definitely to be downstream
+'           of the joystick channels.
+
+'2014_06_16 After various unsuccesfull experimentation, ThrottleAcceleration, ThrottleDeceleration, SteeringAcceleration,
+'           SteeringDeceleration and ThrottleGoCycles variables along with SlopeC1 and SlopeC2 subroutines seem
+'           to allow strong Steering accelration/deceleration while keeping Throttle accelration/deceleration  within
+'           reason.  SlopeC1 and SlopeC2 force acceleration and deceleration of Throttle and Steering rather than M1
+'           and M2 as provided in the Rototeq, and ThrottleGoCycles sends computed Throttle setting to Roboteq only 
+'           every nth cycle.  We do not yet know whether this will eliminated the turn-tightening on deceleration cause
+'           by accel/decel of M1 and M2 rather than Throttle and Steering.
+
+'2015_06_29 revised version for Will:  
+     'Effect of pot on speed and turn rate now done by setting maximum and minimum 
+     'for forward and reverse speed and turn, instead of percentages.  SpeedPot:
+     'subroutine is more complicated, but scaling subroutines are simpler.  John and
+     'I both think that doing settings this way is more intuitive.
+
+     'IMPORTANT What pins are your brakes hooked to? see below
+
+     'Script now reads MixAlgo from profile, so no need to have AccelMixMode as
+     'a user setting.
+
+     'You had TurnAtFullSpeed set to 200 - I haven't checked the
+     'arithmetic, but I think this will give increased turn rate as speed increases.  
+     'Seems dangerous to me, so I've re-set it to 100.  Change it
+     'back if you wish.
+
+     'I have left in your added TurnSpeed parameter and your "if" tests to truncate 
+     'turn in case you still want TurnAtFullSpeed > 100 
+
+     'If using current sensors, script now auto-calibrates zero amp value so no
+     'need to copy value returned by Roborun calibration routine
+
+     'To avoid having motor compensation cause movement if chair is jostled, script
+     'now also reads values of brake pins.  The comment in MotorCompensation now reads
+          'ignore small changes to avoid brake clicking and motor judder if motor milliohms set high
+          'and make sure if stick has been centered BrakeDelay msec that physically jostling the chair 
+          'can't release the brakes
+     'BUT, the program needs to know what pins you are using for the brakes - they were set to absurd
+     'values of 101 and 102 her just so I could compile the script.
+
+
+'2015_06_28 revised version for John:  
+     'Effect of pot on speed and turn rate now done by setting maximum and minimum 
+     'for forward and reverse speed and turn, instead of percentages.  SpeedPot:
+     'subroutine is more complicated, but scaling subroutines are simpler.
+     'I think that doing settings this way is more intuitive.
+
+     'IMPORTANT What pins are your brakes hooked to? see below
+
+     'Script now reads MixAlgo from profile, so no need to have AccelMixMode as
+     'a user setting.
+
+     'If using current sensors, script now auto-calibrates zero amp value so no
+     'need to copy value returned by Roborun calibration routine
+
+     'To avoid having motor compensation cause movement if chair is jostled, script
+     'now reads values of brake pins instead of using a timer.  The comment in MotorCompensation now reads
+          'ignore small changes to avoid brake clicking and motor judder if motor milliohms set high
+          'and make sure if stick has been centered BrakeDelay msec that physically jostling the chair 
+          'can't release the brakes
+     'BUT, the program needs to know what pins you are using for the brakes - they were set to absurd
+     'values of 101 and 102 here just so I could compile the script.
+
+'2016_04_25 MAJOR REVISION - NewMixAccel
+'           three parameters used in LoadBoost: to define accel/decel boost with change of compensation
+'                 LoadBoost_P = 0 'amount of accel boost proportionate to MotorComp 
+'                 LoadBoost_I = 0 'running average of d(MotorComp)/dT, >0 makes boost stay high longer
+'                 LoadBoost_D = 90 'boost proportionate to d(MotorComp)/dT 
+'              only LoadBoost_D seems to be of any importance; both _P and _I make boost last too long
+'           This completely replaces arbitrary speed-value defined accel/decel boosts and limits
+'
+'           added CompTurnBoost to increase motor resistance during turn-in-place; useful if caster geometry or
+'              loading makes initiating turns difficult, or for skid steer.  Value at or near 0 is appropriate
+'              for lightly-loaded casters.
+'
+'           Thus, MotorCompensation: yields nearly constant speed with varying load, while LoadBoost:
+'              adjusts (brushed motor) Accel and Decel (defined as dPWM/dT) to give near constant physical
+'              acceleration and deceleration (dRPM/dT).  LoadBoost: should be of little or no importance
+'              for brushless motors as Accel and Decel for brushless are already defined as dRPM/dT.
+'
+'           MixAccel changed to call use TurnBoost:  in which command and power values of individual motors, 
+'             TurnBoost as multiplier to increase accel/decel when turning, with target throttle value 
+'             temporarily reduced while turning
+'           Thus, a single algorithm now handles all accel/decel mixing for all maneuvers
+'2016_11_24 MAJOR REVISION - Completely new TurnMix - when changing speed and turn rate Throttle = currentSpeed
+'             except once every (TurnBoost+1) LoopCycles.  Gives equal fore-aft acceleration and boosted turns
+'             under all conditions without complexity of AccelMix
+'           MINOR CHANGES made while working on this:
+              'TurnCompBoost only if Steering > 10
+              'removed variable BatVolts and corrected motor compensation calculation to use BattVolts!
+              'SimulatePower: has been removed from script!
+              'SpeedPot: moved to before ScaleThrottle and ScaleSteering because that is where SpeedPot 
+'			     and TurnPot values are used
+'             'new variable DefaultPot introduced to avoid confusion with SpeedPot which changes when running
+              'ThrottleCrossZero: cleaned up and use of PercentThrottle re-activated
+              'corrected error near end of LoadBoost: where I had:
+'               ' boost M2 accel and decel
+'       	       M2Accel = M1Accel + (Accel*M2Comp*LoadBoost_P)/1000000 + (Accel*LoadBoost_D*Diff2)/10000
+'       	       M2Decel = M1Decel [SIC] + (Decel*M2Comp*LoadBoost_P)/1000000 + (Decel*LoadBoost_D*Diff2)/10000
+
+ 

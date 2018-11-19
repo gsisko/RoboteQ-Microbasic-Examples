@@ -1,0 +1,19 @@
+' This script is provided "as-is", without warranty of any kind,
+' expressed or implied, including but not limited to the warranties of
+' merchantability, fitness for a particular purpose and
+' noninfringemement. In no event shall Roboteq be liable for any claim,
+' damages or other liability, arising from the use of the software."
+
+
+top:
+WaitTime = 0
+while(getvalue(_CF) <> 0)
+	print(getvalue(_CAN,1),"\t",getvalue(_CAN,2),"\t",getvalue(_CAN,3),"\t",getvalue(_CAN,4),"\t")
+	print(getvalue(_CAN,5),"\t",getvalue(_CAN,6),"\t",getvalue(_CAN,7),"\t",getvalue(_CAN,8),"\t")
+	print(getvalue(_CAN,9),"\t",getvalue(_CAN,10),"\r")
+	wait(2)
+	WaitTime = WaitTime + 5
+end while
+WaitTime = WaitTime mod 50
+wait(50-WaitTime)
+goto top

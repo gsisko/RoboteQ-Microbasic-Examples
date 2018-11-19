@@ -1,0 +1,67 @@
+Option Explicit
+
+'declare variables
+dim Steering as integer
+dim RC1_Center as integer
+dim RC1 as integer
+dim RC_Status as integer
+dim PrevRC_Status as integer
+
+'declaire pulse/rc inputs being used
+Steering = 1 'Pulse Input Used for Steering, change as needed
+'Throttle = 2 '**Uncomment for 2 channel - Pulse Input Used for Throttle, change as needed
+
+'query pulse center point configuration
+RC1_Center = getconfig(_PCTR, Steering)
+
+
+
+'Main Loop
+Top:
+
+Print("Top of Loop\r") '**Uncomment for debugging
+
+'check if RC remote turned on
+RC1 = getvalue(_PI, Steering) 
+
+
+If RC1 then
+	RC_Status = 1
+	'Print("RC On\r")	'**Uncomment for debugging
+Else
+	RC_Status = 0
+	'Print("RC Off\r")   '**Uncomment for debugging	
+End If
+
+
+If(RC_Status <> PrevRC_Status) 'Only enter if the on/off status of RC remote has changed
+
+	'Center to start loop
+	While RC1 <> RC1_Center 
+		'print("RC Not At Center - Unsafe To Start\r")  '**Uncomment for debugging
+		Setconfig(_CPRI, 2, 0)
+		RC1 = getvalue(_PI, Steering) 		
+	End while
+	
+	'Print("RC Centered - Safe To Start\r")    '**Uncomment for debugging
+	
+	Setconfig(_CPRI,2,1) 'Allows RC control after input has centered
+	
+End If
+
+PrevRC_Status = RC_Status
+
+wait(10) 'loop at 100Hz
+
+Goto Top 'Loop forever	
+	
+	
+
+
+
+
+
+
+
+
+

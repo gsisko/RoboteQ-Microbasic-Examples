@@ -1,0 +1,147 @@
+option explicit
+' Mecanum drive demonstrator
+' Script is written for use in SDC2130 but will work on any other model by changing where commented.
+' Script must be loaded and executed in controller that will serve as Master on a RoboCAN network.
+' Second dual channel controller will act a Slave. Master node id=1, Slave node id=2
+' Script is provided for demonstration purposes, as-is without warranty.
+ 
+dim VD as integer ' Desired Robot Speed
+dim ThetaD as integer ' Desired Angle
+dim VTheta as integer ' Desired Rotation Speed
+dim ThetaD45 as integer ' Desire Angle + 45o
+ 
+' Previous values for change detection
+dim PrevVD as integer ' Desired Robot Speed
+dim PrevThetaD as integer ' Desired Angle
+dim PrevVTheta as integer ' Desired Rotation Speed
+ 
+dim V1 as integer ' Front Left motor
+dim V2 as integer ' Front Right motor
+dim V3 as integer ' Rear Left motor
+dim V4 as integer ' Rear Right motor
+ 
+dim LR as integer ' Left/Right Command
+dim FR as integer ' Forward/Reverse Command
+dim CCW as integer ' Rotation command
+ 
+dim RadioVD as integer ' VD from joystick
+dim RadioTh as integer ' Theta from joystick
+ 
+dim CANAlive as integer ' Alive Robocan nodes
+ 
+Top:
+' Use code below to accept commands via RS232 or USB
+' Send commands with !VAR nn value
+' VAR 1 contains motion speed, +/-1000 range
+' VAR 2 contains motion direction, 0-360 degree range
+' VAR 3 contains rotation speed, +/-1000 range
+'VD = getvalue(_VAR, 1)
+'ThetaD = getvalue(_VAR, 2)
+'VTheta = getvalue(_VAR, 3)
+ 
+' Capture joystick value
+' Change to _PI to capture from standard RC Radio
+LR = getvalue(_PIC, 2) ' X of X-Y joystick
+FR = getvalue(_PIC, 3) 
+CCW = getvalue(_PIC, 4)
+ 
+' Read list of alive RoboCAN nodes
+CANAlive = getvalue(_CL, 1)
+ 
+' Check if Radio is on and Slave is present
+if(LR = 0 or FR = 0 or CCW = 0 or CANAlive <> 273)
+         V1 = 0
+         V2 = 0
+         V3 = 0
+         V4 = 0
+         goto ApplyCommand ' Stop all motors if no radio or no slave
+end if
+ 
+' Centered joystick = 500. Substract offset to convert to 0 to +/-1000
+' Change code below to adapt to other radio than spektrum
+if LR < 500
+         LR = (LR - 500) * 2 ' Multipy by 2 to bring closer to +/-1000
+         if LR > 0 then LR = 0
+elseif LR > 530
+         LR = (LR - 530) * 2
+         if LR < 0 then LR = 0
+else
+         LR = 0
+end if
+LR = -LR
+ 
+if FR < 500
+         FR = (FR - 500) * 2
+         if FR > 0 then FR = 0
+elseif FR > 530
+         FR = (FR - 530) * 2
+         if FR < 0 then FR = 0
+else
+         FR = 0
+end if
+ 
+if CCW < 500
+         CCW = (CCW - 500) * 2
+         if CCW > 0 then CCW = 0
+elseif CCW > 530
+         CCW = (CCW - 530) * 2
+         if CCW < 0 then CCW = 0
+else
+         CCW = 0
+end if
+ 
+' Compute distance of joystick from center position in any direction
+RadioVD = (sqrt(LR * LR + FR * FR)) / 1000 ' sqrt returns result * 1000
+ 
+' Compute angle of X-Y
+if FR <> 0
+         RadioTh = (atan(LR * 1000/FR)) / 10 ' atan takes input * 1000 and returns angle in degrees * 10
+         if LR >= 0 and FR < 0
+                   RadioTh += 180
+         elseif LR < 0 and FR < 0
+                   RadioTh -= 180
+         end if
+elseif LR >0
+         RadioTh = 90
+elseif LR <0
+         RadioTh = -90
+else
+         RadioTh = 0
+end if
+ 
+VD = RadioVD
+ThetaD = RadioTh
+VTheta = -CCW
+ 
+' Uncomment below to check captured values in console
+'print (LR, "\t", FR, "\t", RadioVD, "\t", RadioTh, "\r")
+ 
+' To avoid unnecessary computation, evaluate formulas only if change occurred
+if (VD <> PrevVD or ThetaD <> PrevThetaD or VTheta <> PrevVTheta)
+ 
+         ThetaD45 = ThetaD + 45 ' compute once angle + 45 for use in the 4 equations
+        
+         V1 = (VD * sin(ThetaD45))/1000 + VTheta ' sin takes degrees and returns result * 1000
+         V2 = (VD * cos(ThetaD45))/1000 - VTheta
+         V3 = (VD * cos(ThetaD45))/1000 + VTheta
+         V4 = (VD * sin(ThetaD45))/1000 - VTheta
+        
+         ' Uncomment below to view computed speeds in console
+         'print (V1,"\t",V2,"\t",V3,"\t",V4,"\r")
+end if
+ 
+' Save for detecting change at next loop execution
+PrevVD = VD
+PrevThetaD = ThetaD
+PrevVTheta = VTheta
+ 
+ApplyCommand:
+' Apply to local motors
+SetCommand(_G, 1, V1)
+SetCommand(_G, 2, V2)
+' Send command to Slave, node 2 on RoboCAN network
+SetCANCommand(2, _G, 1, V3)
+SetCANCommand(2, _G, 2, V4)
+ 
+wait(10) ' Repeat loop every 10ms / 100Hz
+goto top

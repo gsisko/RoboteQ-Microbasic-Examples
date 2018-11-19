@@ -1,0 +1,8 @@
+top:
+yaw = getvalue(_EO, 3)
+gain = getvalue(_VAR, 1)
+rc = -yaw / gain
+setcommand(_RC, 5, rc)
+print (yaw,"\t",rc, "\r")
+wait(10)
+goto top

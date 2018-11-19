@@ -1,0 +1,84 @@
+option explicit ' Forces variables to be declared before use. Good practice for avoiding errors
+
+' This script is provided "as-is", without warranty of any kind,
+' expressed or implied, including but not limited to the warranties of
+' merchatability, fitness for a particular purpose and
+' noninfringemement. In no event shall Roboteq be liable for any claim,
+' damages or other liability, arising from the use of the software."
+
+' Motor self test.  
+' Ramps motor 1 to max speed forward and reverse and then stops.
+' Ramps motor 2 to max speed forward and reverse and then stops.
+' Ramps both motor 1 and motor 2 to max speed forward and reverse, and then stops.
+
+print("starting ... \r") ' Lets user know script is starting
+
+dim i as integer
+	i = 0
+	if i > 1700 then i = 0 
+' resets i variable if script has been run once before and power has not been cycled
+	
+	SetCommand(_RWD, 0) ' disables the watchdog timer
+		
+	wait (10) ' pause 10 mS
+top:
+    i = i + 1 ' Starts I count loop increase by 1
+					
+	if i < 100 then'
+		SetCommand(_GO, 1, 0)'motor 1 and 2 stops
+		Setcommand(_GO, 2, 0)
+		
+	end if
+				
+	if i >= 100 and i < 300 then
+		
+		SetCommand(_GO, 1, 1000) 'motor 1 starts from stop to full speed forward then stops
+		
+	end if
+					
+	if i > 300 then
+		
+		SetCommand(_GO, 1, -1000)'motor 1 starts from stop to full speed reverse then stops
+			
+	end if	
+			
+	if i > 500 then'
+		SetCommand(_GO, 1, 0)'motor 1 stops
+		
+	end if
+					
+	if i > 700 then
+		
+		SetCommand(_GO, 2, 1000)'motor 2 starts from stop to full speed forward then stops
+		
+	end if
+					
+	if i > 900 then
+		
+		SetCommand(_GO, 2, -1000)'motor 2 starts from stop to full speed reverse then stops
+			
+	end if
+	
+	if i > 1100 then
+		SetCommand(_GO, 2, 0)'motor 2 stops
+		
+	end if
+					
+	if i >= 1300 
+		
+		SetCommand(_GO, 1, 1000)'motor 1 and 2 starts from stop to full speed forward then stops
+		setcommand(_GO, 2, 1000)
+		
+	end if
+					
+	if i >= 1500 then
+		
+		SetCommand(_GO, 1, -1000)'motor 1 and 2 starts from stop to full speed reverse then stops
+		Setcommand(_GO, 2, -1000)
+			
+	end if
+	
+	if i > 1700 then terminate ' Ends script
+	
+	wait(10)
+goto top ' return to label header.

@@ -1,0 +1,4 @@
+top:
+print(getvalue(_HS,1),"\t",getvalue(_ANG,1),"\r")
+wait(1)
+goto top

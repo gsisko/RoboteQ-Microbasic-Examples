@@ -1,0 +1,65 @@
+option explicit
+' This script provide basic control for an AGV.
+' Motor will turn on upon the presence of a track and stop when track disappears.
+' The track position information is used to provide left/right steering.
+' At forks, the AGV will follow the left or right track depending whether the last
+' marker detected was on the left or right side of the track.
+' Make sure you precede merges with a marker so that the AGV remains on the main track.
+' The presence of a left and right marker simultaneously will cause the AGV to stop for
+' 30 seconds or until the operator presses the button
+' declare variables
+dim Gain as integer
+dim DefaultThrottle as integer
+dim TapeDetect as boolean
+dim MarkerLeft as boolean
+dim MarkerRight as boolean
+dim Throttle as integer
+dim Tape_Position as integer
+dim LineSelect as integer
+dim Steering as integer
+dim GoButton as boolean
+dim RunState as boolean
+dim NotOnStopMarker as boolean
+dim PauseTime as integer
+' initialize constants
+Gain = -7 ' Use negative value to invert steering command
+DefaultThrottle = 250 ' Motor power level while the AGV runs
+LineSelect = 1 ' Use left track by default
+PauseTime = 30000 ' in miliseconds
+' main loop to repeat every 10ms
+top:
+wait(10)
+' read sensor data
+TapeDetect = getvalue(_MGD)
+MarkerLeft = getvalue(_MGM, 1)
+MarkerRight = getvalue(_MGM, 2)
+' Read button state
+GoButton = getvalue(_DI, 2)
+if (GoButton) then SetTimerCount(1, 0) ' Pressing the button will clear the pause timer
+if GetTimerState(1) then RunState = true ' When pause timer is cleared, AGV is allowed to run
+' Use TapeDetect and Pause Timer to apply throttle or not
+if (TapeDetect and GetTimerState(1))
+Throttle = DefaultThrottle
+else
+Throttle = 0
+end if
+' Check Marker presence to select Left or Right track
+if (MarkerLeft) then LineSelect = 1
+if (MarkerRight) then LineSelect = 2
+' Detect when transitioning onto stop markers
+if (NotOnStopMarker and MarkerLeft and MarkerRight)
+NotOnStopMarker = false ' Mark stop marker detection so that it is not detected again until AGV moved away
+SetTimerCount(1, PauseTime) ' Load stop timer timout value
+RunState = false
+else
+NotOnStopMarker = true
+end if
+Tape_Position = getvalue(_MGT, LineSelect)
+' use tape position multiplied with gain as steering
+Steering = Tape_Position * Gain
+' Send throttle and steering to controller Configured in Mixed mode
+setcommand(_G, 1, Throttle)
+setcommand(_G, 2, Steering)
+' Log output. Useful for troubleshooting. Comment out when done.
+print("\r", TapeDetect,"\t", Tape_Position,"\t", MarkerLeft,"\t", MarkerRight,"\t", Throttle,"\t", Steering,"\t",RunState,"\t",LineSelect)
+goto top ' Loop forever

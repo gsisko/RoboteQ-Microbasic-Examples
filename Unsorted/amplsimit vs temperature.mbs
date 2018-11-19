@@ -1,0 +1,30 @@
+' This script is provided "as-is", without warranty of any kind,
+' expressed or implied, including but not limited to the warranties of
+' merchatability, fitness for a particular purpose and
+' noninfringemement. In no event shall Roboteq be liable for any claim,
+' damages or other liability, arising from the use of the software."
+'
+' This script reads the controller temperature and 
+' lowers the amp limit above 50oC
+
+ print("starting ... \r") ' Lets user know script is starting
+ 
+ top: 
+ ' Label marking the beginning of the script. 
+ ' Read the 2 temperature sensors and compute average
+ Temperature1 = getvalue(_TEMP,1)
+ Temperature2 = getvalue(_TEMP,2)
+ TempAvg = (Temperature1 + Temperature2) / 2 
+ 
+ ' If temperature is higher than 50o, set limit to 50A on each channel 
+ if TempAvg > 50 then
+	 setconfig(_ALIM, 1, 500)
+	 setconfig(_ALIM, 2, 500)
+ else
+ ' Otherwise, set limit back to 100A
+	 setconfig(_ALIM, 1, 1000)
+	 setconfig(_ALIM, 2, 1000)
+ end if ' Pause the script for 50ms
+ wait(50)
+ ' Repeat the script from the start
+ goto top   

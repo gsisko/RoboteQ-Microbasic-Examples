@@ -1,0 +1,18 @@
+' This script is provided "as-is", without warranty of any kind,
+' expressed or implied, including but not limited to the warranties of
+' merchatability, fitness for a particular purpose and
+' noninfringemement. In no event shall Roboteq be liable for any claim,
+' damages or other liability, arising from the use of the software"
+
+' Toggles digital output 1 every 1 second.
+' Digital output 1 will turn on for 1 second and then turn off for 1 second
+
+print("starting ... \r") ' Lets user know script is starting
+
+top: 'label header
+print("hi") 'prints back "hi"
+wait(1000) 'waits 1s
+setcommand(_DSET, 1) ' sets digital output 1 on
+wait(1000) ' waits 1s
+setcommand(_DRES, 1) ' Resets digital output 1 to off 
+goto top ' return to label header top:

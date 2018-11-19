@@ -1,0 +1,40 @@
+' This script is provided "as-is", without warranty of any kind,
+' expressed or implied, including but not limited to the warranties of
+' merchatability, fitness for a particular purpose and
+' noninfringemement. In no event shall Roboteq be liable for any claim,
+' damages or other liability, arising from the use of the software"
+
+' Reads the digital state of button or switch and either enables or disables controller emergency stop.
+
+
+option explicit
+
+dim button as boolean 
+
+dim prevbutton as boolean
+
+
+top:
+
+
+button = getvalue(_DIN, 1) ' Replace 1 with the digital input on which your switch/button is connected
+
+if(button <> prevbutton) 'will only change emergency stop condition if button is in a different position 
+
+	if (Button = 1) ' if switch is closed
+
+		setcommand(_EX, 1) 'triggers emergency stop, see _EX on page 220 of User Manual
+	
+	else ' if switch is open
+		setcommand(_MG, 1,) 'releases emergency stop, see _MG on page 222 of User Manual.
+
+	end if
+	
+end if
+prevbutton = button 
+
+wait(10) 'loop every 10ms
+
+
+
+goto top ' Repeat indefinitely every 10ms

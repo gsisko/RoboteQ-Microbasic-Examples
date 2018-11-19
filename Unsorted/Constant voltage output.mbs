@@ -1,0 +1,33 @@
+option explicit ' forces to declare variables and must be at top of script before anything else.
+
+' This script is provided "as-is", without warranty of any kind,
+' expressed or implied, including but not limited to the warranties of
+' merchatability, fitness for a particular purpose and
+' noninfringemement. In no event shall Roboteq be liable for any claim,
+' damages or other liability, arising from the use of the software"
+
+' Applies a voltage to the motor from 0 to 14.0V max, based on analog command
+' and compensates for battery voltage, as long as battery has more than 14V.
+
+
+dim MaxMotorVolts as integer
+dim BatteryVolts as integer
+dim AnalogCommand as integer
+dim PowerOutput as integer
+
+MaxMotorVolts = 140 ' Constant: Max voltage * 10 that will ever be applied to motor
+
+print("starting ... \r") ' Lets user know script is starting
+
+top: ' label header
+BatteryVolts = getvalue(_V, 2) ' Volts are *10
+AnalogCommand = getvalue(_AIC, 1) ' Read pot value on input 1, after it is converted for range. Is -1000/+1000 value
+
+PowerOutput = (MaxMotorVolts * AnalogCommand) / BatteryVolts ' computes data
+
+setcommand(_G, 1, PowerOutput) ' Apply to motor
+
+' Optional print statement for debug and test. Comment out when done
+print ("\rV= ", BatteryVolts, "  Analog = ", AnalogCommand, "   P= ", PowerOutput) ' displays the data that was queried and computed
+wait(10) ' Pause 10ms
+goto top ' loop forever

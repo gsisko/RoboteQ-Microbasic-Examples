@@ -1,0 +1,34 @@
+' This script is provided "as-is", without warranty of any kind,
+' expressed or implied, including but not limited to the warranties of
+' merchatability, fitness for a particular purpose and
+' noninfringemement. In no event shall Roboteq be liable for any claim,
+' damages or other liability, arising from the use of the software."
+
+' This script regularlty reads the current motor command and changes
+' the acceleration settings so that response to change is slower
+' at low command values, and quicker at high command values.
+
+print("starting ... \r") ' Lets user know scripting is starting
+
+top: ' label header
+
+' Read the actual command value
+command = abs(getvalue(_MOTCMD,1))
+
+' If command value is higher than 500 then configure
+' acceleration and deceleration values for channel 1 to 200
+
+if command > 500 then
+	setconfig(_MAC, 1, 200)
+	setconfig(_MDEC, 1, 200)
+else
+' If command value is lower than or equal to 500 then configure
+' acceleration and deceleration values for channel 1 to 5000
+	setconfig(_MAC, 1, 5000)
+	setconfig(_MDEC, 1, 5000)
+end if
+
+' Pause the script for 50ms
+wait(50)
+' Repeat the script from the start
+goto top ' return to label header

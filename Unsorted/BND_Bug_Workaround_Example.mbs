@@ -1,0 +1,16 @@
+'Initialize angle variable
+dim AngleOffset as integer
+' Send the !BND command
+' Use whichever channel you are trying to calibrate
+setcommand(_BND, 1)
+'Wait for a 5 seconds so that controller can peroform the !BND
+wait(5000)
+'Get angle offset
+AngleOffset = getconfig(_BADJ)
+'Check if angle is not in range
+if  AngleOffset > 255 Then
+	AngleOffset = 255 - AngleOffset
+'save the sanitized value to BADJ
+setconfig(_BADJ, AngleOffset)
+	
+

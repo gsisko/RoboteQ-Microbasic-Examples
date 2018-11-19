@@ -1,0 +1,24 @@
+' This script is provided "as-is", without warranty of any kind,
+' expressed or implied, including but not limited to the warranties of
+' merchatability, fitness for a particular purpose and
+' noninfringemement. In no event shall Roboteq be liable for any claim,
+' damages or other liability, arising from the use of the software"
+
+' Detects if there is undervoltage at the battery.  
+' If the controller battery voltage reads back less than 15V, the digital output 1 will be enabled.
+' Else the digital output will be disabled.
+
+print("starting ... \r") ' let user know the script is running
+
+top: 'label header
+print("battery ", battery,"\r") ' Reports back voltage readings
+Battery = getvalue(_VOLTS, 2) ' queries battery voltage under variable Battery
+
+if Battery < 150 then
+	setcommand(_DSET, 1) ' if battery voltage is less than 15V then set digital output 1 on
+else
+	setcommand(_DRES, 1) ' else reset digital output 1 to off.
+	
+end if
+wait(10) 'wait 10 mS
+goto top ' return to label top:

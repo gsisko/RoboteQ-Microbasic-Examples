@@ -1,0 +1,23 @@
+option explicit ' Forces variables to be declared before use. Good practice for avoiding errors
+' Motor self test.  
+' Ramps motor 1 to 50% speed reverse and stops.
+
+wait(1000)
+print("starting ... \r") ' Lets user know script is starting
+
+dim i as integer
+	i = 0
+	if i > 900 then i = 0 
+' resets i variable if script has been run once before and power has not been cycled
+	
+	'SetCommand(_RWD, 0) ' disables the watchdog timer
+	SetCommand(_G, 1, 0)'motor 1 stops
+	wait (1000) ' pause 10 mS
+print("Reverse \r\n")
+setcommand(_G, 1, -500)
+wait(2000)
+print("Forward \r\n")
+setcommand(_G, 1, 500)
+wait(2000)
+print("Stop \r")
+setcommand(_G, 1, 0)

@@ -1,0 +1,37 @@
+option explicit
+' This script is provided "as-is", without warranty of any kind,
+' expressed or implied, including but not limited to the warranties of
+' merchatability, fitness for a particular purpose and
+' noninfringemement. In no event shall Roboteq be liable for any claim,
+' damages or other liability, arising from the use of the software"
+
+' This script detects the logic level of a digital input.  If the input is high(true) then "Serial" is
+' set to the highest command priority.  If the input is low(false) then "Pulse" is set to the highest
+' command priority
+
+dim PrioritySwitch as boolean 'declare variable
+dim prev_PrioritySwitch as boolean
+
+
+top: 'beginning of loop
+
+PrioritySwitch = getvalue(_DIN, 3) ' Reads the logic level of digital input 3.  May change to desired digital input.
+
+if(PrioritySwitch <> prev_PrioritySwitch) 'will only change configuration if the switch logic level is differnt then previously recorded
+	
+	if(PrioritySwitch = true) 
+		setconfig(_CPRI, 1, 0) 'Set Serial to priority level 1
+		setconfig(_CPRI, 2, 1) 'Set Pulse to priority level 2
+	else
+		setconfig(_CPRI, 1, 1) 'Set Pulse to priority level 1
+		setconfig(_CPRI, 2, 0) 'Set Serial to priority level 2
+	end if
+	
+end if
+
+prev_PrioritySwitch = PrioritySwitch
+
+
+wait(10) 'loop at 100Hz
+goto top 'return to top of loop
+

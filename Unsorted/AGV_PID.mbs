@@ -1,0 +1,27 @@
+PIDCompute:
+'              Pseudo Code Implementation
+'              error = setpoint – PV [actual_position]
+'   integral = integral + error*dt
+'   derivative = (error - previous_error)/dt
+'   output = Kp*error + Ki*integral + Kd*derivative
+'   previous_error = error
+'   remmber to prevent over steering
+IF (TapeDetect) THEN
+	Error = 0 - Tape_Position
+	Integral = Integral + (Error * 10)
+	Derivative = (Error - Previous_Error) / 10
+	Steering = ((Kp / 10) * Error) + ((Ki / 10) * Integral) + ((Kd / 10) * Derivative)
+	Previous_Error = Error
+ELSE
+	Error = 0
+	Integral = 0
+	Derivative = 0
+	Steering = 0
+	Previous_Error = 0
+END IF
+                             
+' prevent over steering
+if(Steering>MaxTurn) then Steering = MaxTurn
+if(Steering< -MaxTurn) then Steering = -MaxTurn
+
+return

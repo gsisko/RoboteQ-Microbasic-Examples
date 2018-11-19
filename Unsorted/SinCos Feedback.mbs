@@ -1,0 +1,23 @@
+top:
+ASI1A = getvalue(_ASI, 1)
+ASI2A = getvalue(_ASI, 2)
+AngA = getvalue(_ANG, 1)
+ASI1B = getvalue(_ASI, 3)
+ASI2B = getvalue(_ASI, 4)
+AngB = getvalue(_ANG, 2)
+'ASIOLD1 = getvalue(_VAR, 1)
+'ASIOLD2 = getvalue(_VAR, 2)
+
+print(ASI1A,"\t",ASI2A,"\t",AngA,"\r")
+'print(ASI1,"\t",ASI2,"\t", ASIOLD1,"\t", ASIOLD2,"\r")
+'print(getvalue(_ANG, 1),"\t",getvalue(_ANG, 2),"\r")
+'print(getvalue(_HS, 1),"\t",getvalue(_HS, 2)+5,"\r")
+wait(50)
+goto top
+
+'Channel = getvalue(_VAR, 1)+1
+'top:
+'print(getvalue(_P, Channel),"\t",getvalue(_FC, Channel),"\t","\t",getvalue(_CB, Channel),"\t",getvalue(_A, Channel),"\r")
+'wait(1)
+'goto top
+
